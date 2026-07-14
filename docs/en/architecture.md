@@ -49,6 +49,42 @@ with a cadence and a skill that executes it, in one of two modes:
 - **`live`** — the owner's go-live call. The system sets up cron/scheduled runs
   and the full cadence.
 
+## The memory graph
+
+The graph is not a lost feature. The edges are the `[[wikilinks]]` inside the
+`memory/*.md` notes — they live in the notes, and they always did. In a real
+222-note project memory (plus the `MEMORY.md` index): **919 edges** after
+discounting prose/code false positives, **0 dead links**, **4 orphans**.
+SkillForge's graph was not a source of truth either; it *rebuilt* one on every
+search, from the same wikilinks in the same files (`buildLinkGraph` in
+`retrieval-eval.ts`), and then ran personalized PageRank over it —
+"HippoRAG-lite" — as a boost multiplier, `1 + 0.2 * graph` on top of
+`0.8 * vector + 0.2 * keyword`. It cached a copy to `.data/wikilink-graph.json`
+"for inspection" — derived, regenerable, never the source.
+
+What Keel dropped is that **scorer**, not the graph. And the scorer's value was
+never demonstrated: the whole retrieval stack saturated at recall@5 = 1.0 on a
+golden set of 6 queries — at the ceiling you cannot attribute credit to the
+graph term. Who walks the graph now is the model. Contract rule 2 sends it to
+the `memory/MEMORY.md` index and tells it to follow the links that match the
+task: multi-hop associative retrieval, performed by the reader instead of by a
+scorer.
+
+To see the graph:
+
+```sh
+# hubs (most-cited notes), dead links, orphans, totals
+bash .claude/skills/memory-consolidation/graph.sh
+
+# the raw adjacency list
+bash .claude/skills/memory-consolidation/graph.sh --edges
+```
+
+No index, no daemon, no build step. And the picture comes free: `memory/` is
+markdown with `[[wikilinks]]`, so it opens in Obsidian or VS Code Foam as a
+visual graph with zero dependencies added. SkillForge called these same links
+"the Foam display graph".
+
 ## Two tiers of work
 
 | | Small | Big |

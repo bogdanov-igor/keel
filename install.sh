@@ -127,10 +127,12 @@ if [ "$residue" -eq 1 ]; then
   printf '  %sbash .claude/skills/migrate/sweep.sh%s\n\n' "$D" "$R"
 fi
 
+# This script is as often run BY Claude ("install keel from the archive in this
+# folder") as by a human at a prompt, so the next steps must read correctly either way.
 say "  next:"
-say "    1. open the project in Claude Code"
-[ "$residue" -eq 1 ] && say "    2. run the migrate skill, then the re-audit it proposes"
-say "    $([ "$residue" -eq 1 ] && echo 3 || echo 2). optional browser QA: npx playwright install chromium"
+[ "$residue" -eq 1 ] && say "    · clean up the old system: run the migrate skill (preview: bash .claude/skills/migrate/sweep.sh)"
+say "    · optional browser QA dependency: npx playwright install chromium"
+say "    · if you ran this from a terminal: open the project in Claude Code"
 case "$SRC" in
   "$DEST"/*) printf '\n  %skeep keel/ for updates (re-run this script) or delete it; consider gitignoring keel/%s\n' "$D" "$R" ;;
 esac

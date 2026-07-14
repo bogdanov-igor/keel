@@ -2,11 +2,47 @@
 
 All notable changes to Keel. Versions follow [semver](https://semver.org).
 
+## [1.4.0] — 2026-07-14
+
+Installation you can do by asking, and the memory graph made visible.
+
+### Added
+
+- **Ask-Claude installation.** The documented path is now: drop the archive in
+  the project folder and tell Claude *"install keel from the archive in this
+  folder: verify the sha256, unpack it, run `keel/install.sh`"* — then, for a
+  project coming from an older system, *"clean up the leftovers from the old
+  system and propose the re-audit."* The shell commands remain, one scroll
+  down, for anyone who would rather type them.
+- **`graph.sh`** in the `memory-consolidation` skill — the memory graph from the
+  notes themselves: hubs (most-cited notes), dead links, orphans, totals, and
+  `--edges` for the raw adjacency list. No index, no daemon, no build step. It
+  discounts fenced code blocks, inline code spans and POSIX classes like
+  `[[:space:]]`, so prose *about* wikilinks is not miscounted as an edge — on a
+  real 223-note memory that removed every one of the four "dead links" a naive
+  grep reported.
+- **The graph, documented** (`docs/*/architecture.md`, `docs/*/why-keel.md`):
+  the edges are the `[[wikilinks]]` in the notes and always were — the
+  predecessor built its graph from these same links at query time. What Keel
+  dropped is the PageRank *scorer*, whose contribution its own eval could never
+  establish (saturated at recall@5 = 1.0 on six queries). The model walks the
+  links itself, per contract rule 2. And `memory/` opens in Obsidian or VS Code
+  Foam as a visual graph with zero dependencies added.
+
+### Changed
+
+- `memory-consolidation` calls `graph.sh` instead of re-deriving the same greps
+  inline; hubs are the cheap centrality signal, and a note cited by 2+ others is
+  the promote-to-pattern trigger.
+- `install.sh` next-steps wording now reads correctly whether a human or Claude
+  ran it.
+
 ## [1.3.0] — 2026-07-14
 
 First public release.
 
 ### Added
+
 - **Apache-2.0 licence**, `NOTICE`, and authorship throughout. Redistribution
   is free; attribution and a statement of changes are not.
 - **Documentation in English and Russian**, shipped *inside* the archive
@@ -29,6 +65,7 @@ First public release.
 - `.claude/VERSION` is stamped at install time (the update check reads it).
 
 ### Changed
+
 - `install.sh` now *detects* previous-system residue and points at the
   `migrate` skill instead of only warning. An installer does not move
   someone's files; the skill does, with the owner present.

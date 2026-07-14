@@ -3,9 +3,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.3.0-4a9fd8?style=flat-square" alt="version 1.3.0">
+  <img src="https://img.shields.io/badge/version-1.4.0-4a9fd8?style=flat-square" alt="version 1.4.0">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0">
-  <img src="https://img.shields.io/badge/kernel-264%20KB%20%C2%B7%2048%20files-success?style=flat-square" alt="264 KB, 48 files">
+  <img src="https://img.shields.io/badge/kernel-288%20KB%20%C2%B7%2052%20files-success?style=flat-square" alt="288 KB, 52 files">
   <img src="https://img.shields.io/badge/runtime%20services-0-success?style=flat-square" alt="zero runtime services">
   <img src="https://img.shields.io/badge/contract-79%20lines-success?style=flat-square" alt="79-line contract">
 </p>
@@ -29,16 +29,34 @@ practice told agents to bypass all of it and `grep` the files instead. Keel is
 that bypass, promoted to the design.
 
 → [**What changed, measured**](docs/en/why-keel.md) — the honest comparison:
-3.7× smaller always-on contract, 7.1× less kernel code, zero runtime services
+3.7× smaller always-on contract, 4.8× less kernel code, zero runtime services
 where its predecessor needed two, and the component that OOM-killed a live
 production stage, deleted.
 
-## Install
+## Quickstart
+
+**1.** Download `keel_1.4.0.tgz` and `keel_1.4.0.tgz.sha256` from
+[Releases](https://github.com/bogdanov-igor/keel/releases/latest) into your project folder.
+
+**2.** Open the project in Claude Code and say:
+
+> Install keel from the archive in this folder: verify the sha256, unpack it,
+> run `keel/install.sh`, then tell me what it set up.
+
+**3.** If the project ran SkillForge — or any system before this one — say:
+
+> Clean up the leftovers from the old system and propose the re-audit.
+
+That is the whole installation. Claude verifies the checksum, unpacks, installs,
+and reports; the cleanup step quarantines the predecessor's machinery (deleting
+nothing) and files a re-audit into `BACKLOG.md`.
+
+### Or do it yourself
 
 ```sh
 cd /path/to/project                    # tgz + .sha256 copied here
-shasum -c keel_1.3.0.tgz.sha256        # integrity first: expect "OK"
-tar -xzf keel_1.3.0.tgz
+shasum -c keel_1.4.0.tgz.sha256        # integrity first: expect "OK"
+tar -xzf keel_1.4.0.tgz
 bash keel/install.sh                   # no argument = install right here
 ```
 
@@ -85,6 +103,32 @@ Only optional dependency: Playwright for browser QA
   sha256 sidecars. Small work gets no files; big work gets two — a brief and a
   verified report.
 - **No updater or patch system.** Copy the folder. That is the distribution.
+
+## The memory graph
+
+Dropping the vector stack did not drop the graph. **The edges are the
+`[[wikilinks]]` in the notes**, where they always were: a real 222-note project
+memory carries 919 edges, 0 dead links and 4 orphans.
+
+SkillForge's graph was not a source of truth either — it *rebuilt* one from those
+same links in those same files on every search, then ran personalized PageRank
+("HippoRAG-lite") over it as a boost multiplier, `1 + 0.2 * graph` on top of
+`0.8 * vector + 0.2 * keyword`. **What Keel dropped is that scorer**, whose value
+was never demonstrated: the retrieval stack saturated at recall@5 = 1.0 on a golden
+set of six queries, and at the ceiling you cannot credit the graph term — or any
+other. Who walks the graph now is the model: contract rule 2 says to read the index
+and *follow the links that match the task*.
+
+To see it — no index, no daemon, no build step:
+
+```sh
+bash .claude/skills/memory-consolidation/graph.sh    # hubs, dead links, orphans
+```
+
+And the picture comes free: `memory/` is markdown with `[[wikilinks]]`, so it opens
+in Obsidian or VS Code Foam as a visual graph with zero dependencies added.
+
+→ [Architecture](docs/en/architecture.md) for the detail.
 
 ## Layout in a deployed project
 

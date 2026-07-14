@@ -10,14 +10,37 @@
 Keel itself requires **no runtime services**: no MCP server of its own, no
 daemon, no index to build. The kernel is shell and markdown.
 
-## From the archive
+## Quickstart
 
-You have two files side by side: `keel_1.3.0.tgz` and its `.sha256` sidecar.
+**1.** Download `keel_1.4.0.tgz` and `keel_1.4.0.tgz.sha256` from
+[Releases](https://github.com/bogdanov-igor/keel/releases/latest) into your
+project folder.
+
+**2.** Open the project in Claude Code and say:
+
+> Install keel from the archive in this folder: verify the sha256, unpack it,
+> run `keel/install.sh`, then tell me what it set up.
+
+**3.** If the project ran SkillForge — or any system before this one — say:
+
+> Clean up the leftovers from the old system and propose the re-audit.
+
+That is the whole installation. Claude verifies the checksum, unpacks, installs,
+and reports; the cleanup step quarantines the predecessor's machinery (deleting
+nothing) and files a re-audit into `BACKLOG.md`.
+
+## By hand
+
+The same two paths, typed yourself. They run the same installer.
+
+### From the archive
+
+You have two files side by side: `keel_1.4.0.tgz` and its `.sha256` sidecar.
 
 ```sh
 cd /path/to/project                 # copy both files here
-shasum -c keel_1.3.0.tgz.sha256     # verify integrity first: expect "OK"
-tar -xzf keel_1.3.0.tgz
+shasum -c keel_1.4.0.tgz.sha256     # verify integrity first: expect "OK"
+tar -xzf keel_1.4.0.tgz
 bash keel/install.sh                # no argument = install into this directory
 ```
 
@@ -25,7 +48,7 @@ The unpacked `keel/` folder can stay in the project (re-run `install.sh` to
 update later) or be deleted. If it stays, add `keel/` and the `.tgz` to
 `.gitignore`.
 
-## From the source repo
+### From the source repo
 
 ```sh
 git clone https://github.com/bogdanov-igor/keel.git
@@ -45,8 +68,12 @@ bash keel/install.sh /path/to/project
 
 ## Updating
 
-The same command. Get the newer keel folder (download the release, or
-`git pull`) and run:
+The simplest path: download the new archive into the project folder and say:
+
+> Update keel from the archive in this folder.
+
+By hand it is the same command as the install. Get the newer keel folder
+(download the release, or `git pull`) and run:
 
 ```sh
 cd /path/to/project

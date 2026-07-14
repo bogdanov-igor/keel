@@ -13,31 +13,39 @@ embeddings, no external tooling — the corpus is plain markdown under
 
 ## Procedure
 
-1. **Inventory.** List notes and collect the `[[wikilink]]` edges.
+1. **Inventory.** `graph.sh` derives the graph from the notes
+   themselves — totals, hubs, dead links, orphans. Call it; do not
+   re-derive the same greps inline.
 
    ```bash
-   find memory -name '*.md' ! -name MEMORY.md > /tmp/mc_notes.txt
-   while read -r f; do
-     slug=$(basename "$f" .md)
-     grep -oE '\[\[[^]]+\]\]' "$f" | tr -d '[]' | sed "s|^|$slug -> |"
-   done < /tmp/mc_notes.txt > /tmp/mc_edges.txt
+   bash .claude/skills/memory-consolidation/graph.sh
+   bash .claude/skills/memory-consolidation/graph.sh --edges > /tmp/mc_edges.txt
    ```
 
-2. **Dead wikilinks.** Every `[[slug]]` target must resolve to a note.
+   The summary is the read; `--edges` is the raw adjacency list
+   (`src<TAB>dst`) for citations and per-pair checks below. Edge
+   extraction drops fenced code blocks, inline code spans and POSIX
+   classes like `[[:space:]]`, so prose about wikilinks is not
+   miscounted as an edge.
 
-   ```bash
-   cut -d'>' -f2 /tmp/mc_edges.txt | tr -d ' ' | sort -u | while read -r t; do
-     [ -n "$t" ] && ! find memory -name "$t.md" | grep -q . && echo "DEAD_LINK: $t"
-   done
-   ```
+   HUBS — the most-cited notes — is the cheap centrality signal that
+   replaced the predecessor's PageRank: same links read out of the
+   same files, minus the scoring machinery. It feeds step 6: a note
+   cited by 2+ others is the promote-to-pattern trigger. For the
+   picture rather than the list, open `memory/` in Obsidian or VS Code
+   Foam — markdown with `[[wikilinks]]` is their native graph format,
+   nothing to install.
 
-   Propose a repair per hit: point to the intended note (a renamed
-   file usually shows up in `git log --diff-filter=R -- memory/`) or
-   drop the link if the target was deliberately removed.
+2. **Dead wikilinks.** The DEAD LINKS block names every `[[slug]]`
+   target with no note behind it, plus the notes citing it. Propose a
+   repair per hit: point to the intended note (a renamed file usually
+   shows up in `git log --diff-filter=R -- memory/`) or drop the link
+   if the target was deliberately removed.
 
-3. **Orphans.** A note appearing on neither side of `mc_edges.txt`
-   and absent from `MEMORY.md` is unreachable — flag it for an index
-   line or an explicit prune decision by the owner.
+3. **Orphans.** The ORPHANS block names notes with no link in and no
+   link out. An orphan also absent from `MEMORY.md` is unreachable —
+   flag it for an index line or an explicit prune decision by the
+   owner.
 
 4. **Index integrity and hygiene.** Every index entry resolves to a
    file; every note has exactly one index line; each entry is one
@@ -58,9 +66,10 @@ embeddings, no external tooling — the corpus is plain markdown under
    propose a merge into one note that supersedes both.
 
 6. **Promote to pattern.** A lesson cited via `[[slug]]` from 2+
-   other notes, or whose theme recurs across 2+ lessons, has the
-   real-use count a pattern requires — propose promotion into
-   `memory/patterns/` with the source lessons linked as evidence.
+   other notes (HUBS counts this directly, `count ← slug`), or whose
+   theme recurs across 2+ lessons, has the real-use count a pattern
+   requires — propose promotion into `memory/patterns/` with the
+   source lessons linked as evidence.
 
 7. **Stale notes.** Date each note with
    `git log -1 --format=%cs -- <file>`. A lesson untouched ~90+ days

@@ -1,0 +1,13 @@
+{
+  "circuit_breaker": {
+    "max_tree_procs": 80,
+    "tree_rss_mb": 4096,
+    "host_mem_pressure_level": 2,
+    "healthy_start_seconds": 20
+  },
+  "update_check": {
+    "enabled": true,
+    "repo": "bogdanov-igor/keel",
+    "interval_hours": 24
+  }
+}

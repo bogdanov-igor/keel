@@ -1,0 +1,7 @@
+# Build output — releases carry the archive, the repo does not.
+dist/
+
+# Local noise
+.DS_Store
+.claude.bak.*
+.keel-migration/

@@ -36,8 +36,10 @@ exists. Unwritten insight dies with the context window.
    risky, or multi-hour): skill `stage`.
 2. Before nontrivial work: read the relevant section of
    `memory/MEMORY.md`, follow links that match the task; grep
-   `memory/` by symptom when unsure. After work that taught something
-   non-obvious: skill `remember`.
+   `memory/` by symptom when unsure. Before changing a file you did
+   not just write, ground by location: skill `recall`. After work that
+   taught something non-obvious: skill `remember`, anchoring the note
+   to the code it is about.
 3. Done means product truth. Green tsc/lint/build is necessary, never
    sufficient. UI work is done only after a browser pass (skill
    `qa-browser`). Stage-level work is done only after the `verifier`

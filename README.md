@@ -3,11 +3,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.0-4a9fd8?style=flat-square" alt="version 1.4.0">
+  <img src="https://img.shields.io/badge/version-1.5.0-4a9fd8?style=flat-square" alt="version 1.5.0">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0">
-  <img src="https://img.shields.io/badge/kernel-288%20KB%20%C2%B7%2052%20files-success?style=flat-square" alt="288 KB, 52 files">
+  <img src="https://img.shields.io/badge/kernel-304%20KB%20%C2%B7%2054%20files-success?style=flat-square" alt="304 KB, 54 files">
+  <img src="https://img.shields.io/badge/skills-37-success?style=flat-square" alt="37 skills">
   <img src="https://img.shields.io/badge/runtime%20services-0-success?style=flat-square" alt="zero runtime services">
-  <img src="https://img.shields.io/badge/contract-79%20lines-success?style=flat-square" alt="79-line contract">
+  <img src="https://img.shields.io/badge/contract-81%20lines-success?style=flat-square" alt="81-line contract">
 </p>
 
 <p align="center">
@@ -29,13 +30,13 @@ practice told agents to bypass all of it and `grep` the files instead. Keel is
 that bypass, promoted to the design.
 
 → [**What changed, measured**](docs/en/why-keel.md) — the honest comparison:
-3.7× smaller always-on contract, 4.8× less kernel code, zero runtime services
+3.6× smaller always-on contract, 4.3× less kernel code, zero runtime services
 where its predecessor needed two, and the component that OOM-killed a live
 production stage, deleted.
 
 ## Quickstart
 
-**1.** Download `keel_1.4.0.tgz` and `keel_1.4.0.tgz.sha256` from
+**1.** Download `keel_1.5.0.tgz` and `keel_1.5.0.tgz.sha256` from
 [Releases](https://github.com/bogdanov-igor/keel/releases/latest) into your project folder.
 
 **2.** Open the project in Claude Code and say:
@@ -55,8 +56,8 @@ nothing) and files a re-audit into `BACKLOG.md`.
 
 ```sh
 cd /path/to/project                    # tgz + .sha256 copied here
-shasum -c keel_1.4.0.tgz.sha256        # integrity first: expect "OK"
-tar -xzf keel_1.4.0.tgz
+shasum -c keel_1.5.0.tgz.sha256        # integrity first: expect "OK"
+tar -xzf keel_1.5.0.tgz
 bash keel/install.sh                   # no argument = install right here
 ```
 
@@ -73,10 +74,10 @@ Only optional dependency: Playwright for browser QA
 ## What it is
 
 - **One always-on contract** — [`.claude/CLAUDE.md`](bundle/.claude/CLAUDE.md),
-  79 lines. Everything else loads only when used.
-- **36 lazy-loaded skills** — 6 core (`stage`, `qa-browser`, `audit`,
-  `remember`, `safe-dev-server`, `migrate`) plus 30 domain skills across
-  engineering, devops, growth, copy and research.
+  81 lines. Everything else loads only when used.
+- **37 lazy-loaded skills** — 7 core (`stage`, `qa-browser`, `audit`,
+  `remember`, `recall`, `safe-dev-server`, `migrate`) plus 30 domain skills
+  across engineering, devops, growth, copy and research.
 - **`OPS.md`, the duty board** — standing responsibilities with a cadence, each
   mapped to a skill. Two modes: `build` (no scheduled token burns) and `live`
   (the owner's go-live call: cron, full cadence). This is what makes end-to-end
@@ -86,9 +87,10 @@ Only optional dependency: Playwright for browser QA
 - **3 hooks** — a secret-leak guard, a dev-server forkbomb circuit breaker
   (both earned their place by stopping real incidents), and a silent
   update check.
-- **File memory** — `memory/` notes with a strict one-line index, `BACKLOG.md`
-  as the single work queue, `PARKED.md` so owner-blocked work parks instead of
-  rotting.
+- **File memory, anchored to the code** — `memory/` notes with a strict one-line
+  index, plus code anchors that make a lesson reachable *from* the file it is
+  about (skill `recall`). `BACKLOG.md` as the single work queue, `PARKED.md` so
+  owner-blocked work parks instead of rotting.
 
 ## What it deliberately does not have
 
@@ -104,29 +106,57 @@ Only optional dependency: Playwright for browser QA
   verified report.
 - **No updater or patch system.** Copy the folder. That is the distribution.
 
-## The memory graph
+## Memory that knows the code
 
-Dropping the vector stack did not drop the graph. **The edges are the
-`[[wikilinks]]` in the notes**, where they always were: a real 222-note project
-memory carries 919 edges, 0 dead links and 4 orphans.
+Grounding used to work by **symptom** — grep and hope. You had to already suspect
+the failure to find the lesson about it. It never worked by **location**. In a real
+222-note project memory, 141 notes name code files — 494 mentions, 237 unique files
+— and none of it was reachable *from* the code. You could not ask what the project
+already knows about `apps/web/proxy.ts` before opening it.
 
-SkillForge's graph was not a source of truth either — it *rebuilt* one from those
-same links in those same files on every search, then ran personalized PageRank
-("HippoRAG-lite") over it as a boost multiplier, `1 + 0.2 * graph` on top of
-`0.8 * vector + 0.2 * keyword`. **What Keel dropped is that scorer**, whose value
-was never demonstrated: the retrieval stack saturated at recall@5 = 1.0 on a golden
-set of six queries, and at the ceiling you cannot credit the graph term — or any
-other. Who walks the graph now is the model: contract rule 2 says to read the index
-and *follow the links that match the task*.
+**`recall` is that missing direction.** A note declares the code it is about, in
+front-matter:
 
-To see it — no index, no daemon, no build step:
-
-```sh
-bash .claude/skills/memory-consolidation/graph.sh    # hubs, dead links, orphans
+```yaml
+code:
+  - apps/web/proxy.ts#handleRequest
+  - apps/web/middleware.ts
 ```
 
-And the picture comes free: `memory/` is markdown with `[[wikilinks]]`, so it opens
-in Obsidian or VS Code Foam as a visual graph with zero dependencies added.
+Two queries — no index, no daemon, no build step:
+
+```sh
+bash .claude/skills/recall/anchors.sh apps/web/proxy.ts   # what we know about this code
+bash .claude/skills/recall/anchors.sh --check             # dead anchors
+```
+
+Results come in two sets. **ANCHORED** — notes that declared this code: exact, and
+checkable. **MENTIONED** — notes that merely name it in prose, ranked by density:
+useful, noisy, and impossible to verify, which is precisely the argument for
+anchoring.
+
+**Rot detection is the point.** Rename a symbol or delete a file and `--check`
+reports `DEAD_SYMBOL` / `DEAD_FILE` — the code moved, so the note now lies. Both
+cases are verified end to end. A prose mention can never be checked at all.
+
+**Code→code edges are not built here.** Callers, references and the call hierarchy
+are computed exactly and live by serena (LSP, already seeded in `.mcp.json`):
+`find_symbol`, `find_referencing_symbols`. Hand-maintained code structure rots; an
+LSP does not. The anchor layer carries only what an LSP cannot know — what we
+*learned* about a place in the code. Contract rule 2 routes to it: before changing a
+file you did not just write, ground by location. That routing is why the contract grew
+from 79 lines to 81 — a skill nobody is routed to is a skill nobody uses, which is
+exactly how the predecessor's skill catalogue died.
+
+Note-to-note links remain what they always were — memory hygiene:
+`bash .claude/skills/memory-consolidation/graph.sh` reports hubs, dead links and
+orphans, and nothing beyond that.
+
+What Keel dropped from SkillForge was never the graph but the **PageRank scorer**
+over it — `1 + 0.2 * graph` on top of `0.8 * vector + 0.2 * keyword` — whose value
+was never demonstrated: the retrieval stack saturated at recall@5 = 1.0 on a golden
+set of six queries, and at the ceiling you cannot credit the graph term, or any
+other. That graph was note-to-note as well. It never knew the code at all.
 
 → [Architecture](docs/en/architecture.md) for the detail.
 

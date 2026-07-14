@@ -25,6 +25,28 @@ session trivia, restated documentation.
 Body ≤ 30 lines: **What happened** (file:line, commit) → **Why** →
 **How to apply**. Link related notes with `[[slug]]`.
 
+## Anchor it to the code
+
+If the note is about specific code, name that code in front-matter — this is
+what makes it findable later by someone standing in the file, instead of only
+by someone who already guessed the symptom (skill `recall`):
+
+```yaml
+---
+name: cron-runner-host-header-regression
+description: v2 multi-tenant Host routing in middleware broke internal cron callers
+kind: antipattern
+code:
+  - apps/web/proxy.ts#handleRequest
+  - apps/web/middleware.ts
+---
+```
+
+Anchor what the lesson is *about*, not every file the session opened. A prose
+mention of `proxy.ts` in the body is not an anchor: it cannot be queried and it
+cannot be checked for rot. An anchor can — when the code moves, `recall --check`
+says so.
+
 ## Index it
 
 Add ONE line to the matching domain section of `memory/MEMORY.md`:

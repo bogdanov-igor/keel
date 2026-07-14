@@ -47,9 +47,9 @@ if [ -e "$DEST/.claude" ] || [ -L "$DEST/.claude" ]; then
   ok "previous .claude → ${BAK##*/}"
 fi
 cp -R "$SRC/bundle/.claude" "$DEST/.claude"
-chmod +x "$DEST/.claude/hooks/"*.sh \
-         "$DEST/.claude/skills/safe-dev-server/safe-run.sh" \
-         "$DEST/.claude/skills/migrate/sweep.sh"
+# Every shipped script, not a hand-maintained list — a new skill script must not
+# depend on someone remembering to add it here.
+find "$DEST/.claude" -name '*.sh' -exec chmod +x {} +
 # The update-check hook compares this against the latest upstream release.
 printf '%s\n' "$VER" > "$DEST/.claude/VERSION"
 ok "kernel installed ($(ls "$DEST/.claude/skills" | wc -l | tr -d ' ') skills, 2 agents, 3 hooks)"

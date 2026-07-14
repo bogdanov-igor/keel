@@ -12,7 +12,7 @@
 
 ## Быстрый старт
 
-**1.** Скачайте `keel_1.4.0.tgz` и `keel_1.4.0.tgz.sha256` из
+**1.** Скачайте `keel_1.5.0.tgz` и `keel_1.5.0.tgz.sha256` из
 [Releases](https://github.com/bogdanov-igor/keel/releases/latest) в папку проекта.
 
 **2.** Откройте проект в Claude Code и скажите:
@@ -35,12 +35,12 @@
 
 ### Из архива
 
-У вас рядом лежат два файла: `keel_1.4.0.tgz` и его сайдкар `.sha256`.
+У вас рядом лежат два файла: `keel_1.5.0.tgz` и его сайдкар `.sha256`.
 
 ```sh
 cd /path/to/project                 # сюда скопированы оба файла
-shasum -c keel_1.4.0.tgz.sha256     # сначала целостность: ждём "OK"
-tar -xzf keel_1.4.0.tgz
+shasum -c keel_1.5.0.tgz.sha256     # сначала целостность: ждём "OK"
+tar -xzf keel_1.5.0.tgz
 bash keel/install.sh                # без аргумента = ставим в текущую директорию
 ```
 

@@ -21,7 +21,7 @@
 
 ```sh
 cd /path/to/project
-tar -xzf keel_1.4.0.tgz && bash keel/install.sh
+tar -xzf keel_1.5.0.tgz && bash keel/install.sh
 ```
 
 Установщик уводит старый `.claude` в `.claude.bak.<timestamp>`, переносит все

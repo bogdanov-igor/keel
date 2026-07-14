@@ -18,10 +18,8 @@ cp "$ROOT/README.md" "$ROOT/README.ru.md" "$ROOT/LICENSE" "$ROOT/NOTICE" \
 cp -R "$ROOT/bundle" "$STAGE/keel/bundle"
 cp -R "$ROOT/docs" "$STAGE/keel/docs"
 find "$STAGE" -name '.DS_Store' -delete
-chmod +x "$STAGE/keel/install.sh" \
-  "$STAGE/keel/bundle/.claude/hooks/"*.sh \
-  "$STAGE/keel/bundle/.claude/skills/safe-dev-server/safe-run.sh" \
-  "$STAGE/keel/bundle/.claude/skills/migrate/sweep.sh"
+chmod +x "$STAGE/keel/install.sh"
+find "$STAGE/keel/bundle" -name '*.sh' -exec chmod +x {} +
 
 TGZ="$OUT/keel_${VER}.tgz"
 tar -czf "$TGZ" -C "$STAGE" keel
@@ -35,10 +33,17 @@ fail() { echo "keel: archive self-test FAILED — $1 (work area kept at $T)" >&2
 [ -f "$T/OPS.md" ] && [ -f "$T/.mcp.json" ]       || fail "seeds missing"
 [ -x "$T/.claude/hooks/forkbomb-guard.sh" ]       || fail "hooks not executable"
 [ -x "$T/.claude/skills/migrate/sweep.sh" ]       || fail "migrate sweep not executable"
+[ -x "$T/.claude/skills/recall/anchors.sh" ]      || fail "recall anchors not executable"
+[ -x "$T/.claude/skills/memory-consolidation/graph.sh" ] || fail "memory graph not executable"
 [ "$(cat "$T/.claude/VERSION")" = "$VER" ]        || fail "version not stamped for update-check"
 [ -f "$T/keel/LICENSE" ] && [ -f "$T/keel/README.ru.md" ] \
   && [ -f "$T/keel/docs/ru/why-keel.md" ]         || fail "docs/licence not shipped in the archive"
-[ "$(ls "$T/.claude/skills" | wc -l | tr -d ' ')" -ge 36 ] || fail "skill count too low"
+[ "$(ls "$T/.claude/skills" | wc -l | tr -d ' ')" -ge 37 ] || fail "skill count too low"
+# The tools the docs hand the reader must run from a fresh install, not just from the repo.
+( cd "$T" && CLAUDE_PROJECT_DIR="$T" bash .claude/skills/recall/anchors.sh --check >/dev/null 2>&1 ) \
+  || fail "recall --check does not run on a fresh install"
+( cd "$T" && CLAUDE_PROJECT_DIR="$T" bash .claude/skills/memory-consolidation/graph.sh >/dev/null 2>&1 ) \
+  || fail "memory graph does not run on a fresh install"
 # The update-check hook must stay silent when the installed version is current.
 out="$(cd "$T" && CLAUDE_PROJECT_DIR="$T" bash .claude/hooks/update-check.sh 2>/dev/null || true)"
 case "$out" in

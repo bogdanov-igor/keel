@@ -5,7 +5,7 @@ orchestrator.** Everything below follows from it.
 
 ## The contract
 
-[`.claude/CLAUDE.md`](../../bundle/.claude/CLAUDE.md) — 79 lines, always in
+[`.claude/CLAUDE.md`](../../bundle/.claude/CLAUDE.md) — 81 lines, always in
 context, and the only thing that always is. It states two things:
 
 **Ownership.** The agent is the sole executor of the product end to end. There
@@ -15,11 +15,12 @@ manages spend. The owner is the customer: grants access, sets direction, reads
 reports. A user complaint, an error in the logs, an unhardened port — each is
 the agent's to notice, queue, and fix without being asked.
 
-**Ten working rules.** Two tiers of work; ground in memory before acting; done
-means product truth, not a green build; one backlog; park what is blocked;
-audits file findings instead of accumulating them; persistent processes only
-through the safe launcher; secrets never in files; subagents for context, not
-role-play; sweep parked work and duties at session start.
+**Ten working rules.** Two tiers of work; ground in memory before acting — by
+symptom in the index, and by location in the code before changing a file you did
+not just write; done means product truth, not a green build; one backlog; park
+what is blocked; audits file findings instead of accumulating them; persistent
+processes only through the safe launcher; secrets never in files; subagents for
+context, not role-play; sweep parked work and duties at session start.
 
 The rest of the kernel is pointers. Procedures live in skills and enter context
 only when used.
@@ -49,28 +50,19 @@ with a cadence and a skill that executes it, in one of two modes:
 - **`live`** — the owner's go-live call. The system sets up cron/scheduled runs
   and the full cadence.
 
-## The memory graph
+## The memory graph — and the one that matters
 
-The graph is not a lost feature. The edges are the `[[wikilinks]]` inside the
-`memory/*.md` notes — they live in the notes, and they always did. In a real
-222-note project memory (plus the `MEMORY.md` index): **919 edges** after
-discounting prose/code false positives, **0 dead links**, **4 orphans**.
-SkillForge's graph was not a source of truth either; it *rebuilt* one on every
-search, from the same wikilinks in the same files (`buildLinkGraph` in
-`retrieval-eval.ts`), and then ran personalized PageRank over it —
-"HippoRAG-lite" — as a boost multiplier, `1 + 0.2 * graph` on top of
-`0.8 * vector + 0.2 * keyword`. It cached a copy to `.data/wikilink-graph.json`
-"for inspection" — derived, regenerable, never the source.
+Two different graphs get called "the memory graph". One of them keeps memory
+tidy. The other one is why you keep memory at all.
 
-What Keel dropped is that **scorer**, not the graph. And the scorer's value was
-never demonstrated: the whole retrieval stack saturated at recall@5 = 1.0 on a
-golden set of 6 queries — at the ceiling you cannot attribute credit to the
-graph term. Who walks the graph now is the model. Contract rule 2 sends it to
-the `memory/MEMORY.md` index and tells it to follow the links that match the
-task: multi-hop associative retrieval, performed by the reader instead of by a
-scorer.
-
-To see the graph:
+**Note ↔ note is hygiene.** The edges are the `[[wikilinks]]` inside the
+`memory/*.md` notes — they live in the notes, and they always did. `graph.sh`
+reads them and reports hubs, dead links, orphans: on a real project memory,
+**919 edges** after discounting prose/code false positives, **0 dead links**,
+**4 orphans**. No index, no daemon, no build step. That is what it is good for,
+and it is not good for anything else — it tells you when memory is fraying, not
+what the code does. (`memory/` is markdown with wikilinks, so it also opens in
+Obsidian or VS Code Foam. That is a picture, not a tool.)
 
 ```sh
 # hubs (most-cited notes), dead links, orphans, totals
@@ -80,10 +72,66 @@ bash .claude/skills/memory-consolidation/graph.sh
 bash .claude/skills/memory-consolidation/graph.sh --edges
 ```
 
-No index, no daemon, no build step. And the picture comes free: `memory/` is
-markdown with `[[wikilinks]]`, so it opens in Obsidian or VS Code Foam as a
-visual graph with zero dependencies added. SkillForge called these same links
-"the Foam display graph".
+What Keel dropped from SkillForge was the **scorer**, not the graph. SkillForge
+did not treat its graph as a source of truth either; it *rebuilt* one on every
+search, from the same wikilinks in the same files (`buildLinkGraph` in
+`retrieval-eval.ts`), ran personalized PageRank over it — "HippoRAG-lite" — as a
+boost multiplier, `1 + 0.2 * graph` on top of `0.8 * vector + 0.2 * keyword`,
+and cached a copy to `.data/wikilink-graph.json` "for inspection": derived,
+regenerable, never the source. The scorer's value was never demonstrated — the
+whole retrieval stack saturated at recall@5 = 1.0 on a golden set of 6 queries,
+and at the ceiling you cannot attribute credit to the graph term. Who walks the
+note graph now is the model: contract rule 2 sends it to the `memory/MEMORY.md`
+index and tells it to follow the links that match the task. And that graph was
+note-to-note as well. It never knew the code at all.
+
+**Code ↔ knowledge is `recall`, and that is the graph that carries weight.**
+Grounding by *symptom* is grep — you have to suspect the failure already to find
+the lesson about it. Grounding by *location* is the question you actually have
+open: what does this project know about `apps/web/proxy.ts`? Until 1.5.0 that
+question had no answer. In a real 222-note project memory, **141 notes name code
+files** — 494 mentions across 237 unique files — and none of it was reachable
+from the code.
+
+A note now declares the code it is about, in front-matter:
+
+```yaml
+code:
+  - apps/web/proxy.ts#handleRequest
+  - apps/web/middleware.ts
+```
+
+`path/to/file.ts#symbol`, or just the file. Two queries:
+
+```sh
+# what we know about this code — before you touch it
+bash .claude/skills/recall/anchors.sh apps/web/proxy.ts
+
+# anchors that no longer resolve
+bash .claude/skills/recall/anchors.sh --check
+```
+
+Results come back in two sets. **ANCHORED** — notes that declared this code in
+their front-matter: exact, and checkable. **MENTIONED** — notes that merely name
+it in prose, ranked by mention density: useful, noisy, and unverifiable — which
+is the whole argument for anchoring.
+
+**Rot detection is the point.** Rename a symbol or delete a file and `--check`
+reports `DEAD_SYMBOL` / `DEAD_FILE` — the note describes code that no longer
+exists, and it says so before you act on it. A prose mention can never be checked
+at all. Dead anchors file as P2 findings like anything else.
+
+**Code → code edges are deliberately not built here.** Callers, references,
+import trees, call hierarchy — serena (LSP, seeded in `.mcp.json`) computes them
+exactly and live: `find_symbol`, `find_referencing_symbols`. A hand-maintained
+map of code structure rots on the first refactor, and a rotted map is worse than
+no map; an LSP does not rot. So the anchors layer carries only the edge no LSP
+can derive: what we *learned* about a place in the code — that this file
+fork-bombed a Mac, that this route shipped green and broke in prod.
+
+Contract rule 2 routes to it: *"Before changing a file you did not just write,
+ground by location: skill `recall`."* A skill nothing routes to is a skill nobody
+uses — which is exactly how the predecessor's catalog died.
 
 ## Two tiers of work
 
@@ -99,11 +147,11 @@ architecture rewrite or a padding fix. Ceremony on small work is pure tax.
 
 ## Skills
 
-36 markdown procedures under `.claude/skills/`, lazy-loaded — a skill costs
+37 markdown procedures under `.claude/skills/`, lazy-loaded — a skill costs
 nothing until it is used.
 
-- **Core (6):** `stage`, `qa-browser`, `audit`, `remember`, `safe-dev-server`,
-  `migrate`
+- **Core (7):** `stage`, `qa-browser`, `audit`, `remember`, `recall`,
+  `safe-dev-server`, `migrate`
 - **Domain (30):** engineering (code/security/architecture/data-model/API/perf/
   test/tech-debt), devops (CI, deploy, observability, dependencies), growth
   (funnel, CRO, SEO, pricing, PMF, positioning, competitors), copy and support.

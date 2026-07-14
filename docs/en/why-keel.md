@@ -13,25 +13,27 @@ from the two trees; the commands are at the bottom.
 ## The measurements
 
 Compared: SkillForge 1.8.2 as deployed in the ShipPulse project, against
-Keel 1.4.0. Token figures are estimates at ~4 characters/token and are marked
+Keel 1.5.0. Token figures are estimates at ~4 characters/token and are marked
 as such; everything else is an exact count.
 
-| | SkillForge 1.8.2 | Keel 1.4.0 | Delta |
+| | SkillForge 1.8.2 | Keel 1.5.0 | Delta |
 |---|---|---|---|
-| Always-loaded contract | `CLAUDE.md` (80 lines) + `_protocol.md` (247 lines) = **327 lines / 15,245 chars** (~3.8k tokens est.) | `CLAUDE.md` = **79 lines / 4,094 chars** (~1.0k tokens est.) | **3.7× smaller** |
-| Kernel code to trust and maintain | **6,316 lines** of TS/JS/shell across 17 files — MCP server, embedding pipeline, retrieval eval, sync, update, verify | **1,305 lines** of shell across 8 files — installer, archive builder, 3 hooks, safe-run launcher, migration sweep, memory graph | **4.8× less** |
+| Always-loaded contract | `CLAUDE.md` (80 lines) + `_protocol.md` (247 lines) = **327 lines / 15,245 chars** (~3.8k tokens est.) | `CLAUDE.md` = **81 lines / 4,227 chars** (~1.1k tokens est.) | **3.6× smaller** |
+| Kernel code to trust and maintain | **6,316 lines** of TS/JS/shell across 17 files — MCP server, embedding pipeline, retrieval eval, sync, update, verify | **1,460 lines** of shell across 9 files — installer, archive builder, 3 hooks, safe-run launcher, migration sweep, memory graph, code anchors | **4.3× less** |
 | Runtime services required | **2** — an MCP server (bun) + an Ollama daemon serving `bge-m3` embeddings | **0** | — |
-| Installed footprint | **63 MB / 3,796 files** (24 MB of `node_modules` for the MCP server; the remainder is the vector index plus `.tgz` archives the updater made *of itself*). Clean shipped tree, excluding those: 4.3 MB / 133 files | **288 KB / 52 files** | **15×** smaller than its cleanest measure; **224×** smaller than what it becomes in a working project |
+| Installed footprint | **63 MB / 3,796 files** (24 MB of `node_modules` for the MCP server; the remainder is the vector index plus `.tgz` archives the updater made *of itself*). Clean shipped tree, excluding those: 4.3 MB / 133 files | **304 KB / 54 files** | **14×** smaller than its cleanest measure; **212×** smaller than what it becomes in a working project |
 | Subagents | **8 personas** — orchestrator, product, qa, security, devops, research, copy, skill-creator | **2 by context isolation** — `scout` (read-only exploration), `verifier` (independent judge) | — |
-| Retrieval | embeddings (`bge-m3` via Ollama) + reranker + PageRank over the note graph | `MEMORY.md` index + `grep` | — |
+| Retrieval | embeddings (`bge-m3` via Ollama) + reranker + PageRank over the note-to-note graph | `MEMORY.md` index + `grep` + code anchors (`recall`) | — |
 | Retrieval golden set it was built to serve | **6 queries**, saturated at recall@5 = 1.0 | n/a | — |
 | Ceremony before the first line of code | protocol + `plan.json` + `because[]` citations + approval gate — identical for an architecture rewrite and a padding fix | **0 files** for small work; **2 files** (brief, report) for big work | — |
 
 **The kernel grew, and this table says so.** At 1.3.0 it was 893 lines of shell
 across 5 files — a 7.1× advantage. Version 1.4.0 added the migration sweep, the
-update check and the memory-graph tool, and the advantage fell to 4.8×. Every
-line added is a line someone has to trust; a comparison that only ever improves
-is a comparison being managed.
+update check and the memory-graph tool: 1,305 lines across 8 files, and the
+advantage fell to 4.8×. Version 1.5.0 added the code-anchor resolver: **1,460
+lines across 9 files**, and the advantage fell again, to **4.3×**. Every line
+added is a line someone has to trust; a comparison that only ever improves is a
+comparison being managed.
 
 ## What production actually said
 
@@ -72,22 +74,35 @@ coordinating than working.
 
 ### What about the graph?
 
-The retrieval row above is about a *scorer*, not about the graph. The graph is
-still here.
+Two different graphs keep getting confused, and at 1.4.0 this document confused
+them — it oversold the one that matters less. Separate them: there is a
+**note-to-note** graph, and there is a **code-to-knowledge** graph. Only the
+second one helps you write code.
 
-**The edges are the `[[wikilinks]]`**, inside `memory/*.md`, where they always
-were. A real project memory of 222 notes (plus the `MEMORY.md` index) carries
-**919 edges**, **0 dead links** and **4 orphans** — run `graph.sh` below and it
-prints exactly those figures. Removing the MCP server changed none of that.
+**The note-to-note graph is memory hygiene. That is all it is.** The edges are
+the `[[wikilinks]]` inside `memory/*.md`, where they always were. A real project
+memory of 222 notes (plus the `MEMORY.md` index) carries **919 edges**,
+**0 dead links** and **4 orphans** — `graph.sh` prints exactly those figures:
 
-**SkillForge's graph was not a source of truth either.** It *rebuilt* the graph
-from the same `[[wikilinks]]` in the same files on every search
-(`retrieval-eval.ts`, `buildLinkGraph`), then ran personalized PageRank over it
-— "HippoRAG-lite" — as a boost multiplier: `1 + 0.2 * graph` on top of
-`0.8 * vector + 0.2 * keyword`. It did cache a copy to
+```sh
+bash .claude/skills/memory-consolidation/graph.sh           # hubs, dead links, orphans, totals
+bash .claude/skills/memory-consolidation/graph.sh --edges   # raw adjacency list
+```
+
+Hubs, dead links, orphans — that is a maintenance report on the notes. It is
+genuinely useful for that, and for nothing else. It does not tell you anything
+about the code you are about to change. (`memory/` is plain markdown with
+`[[wikilinks]]`, so it also happens to open in Obsidian or VS Code Foam. That is
+a property of the file format, not a feature of the kernel.)
+
+**SkillForge's PageRank ran over that same note-to-note graph. It never knew the
+code.** It *rebuilt* the graph from the same `[[wikilinks]]` in the same files on
+every search (`retrieval-eval.ts`, `buildLinkGraph`), then ran personalized
+PageRank over it — "HippoRAG-lite" — as a boost multiplier: `1 + 0.2 * graph` on
+top of `0.8 * vector + 0.2 * keyword`. It cached a copy to
 `.data/wikilink-graph.json` "for inspection", in its own words — a derived
-artifact, regenerable from the notes at any moment, and the notes are what
-Keel kept.
+artifact, regenerable from the notes at any moment. Notes pointing at notes. Not
+one edge in it ever touched a source file.
 
 **What Keel dropped is that scorer, not the graph.** And the scorer's value was
 never demonstrated: the whole retrieval stack saturated at **recall@5 = 1.0 on a
@@ -95,21 +110,50 @@ golden set of 6 queries**. At the ceiling you cannot attribute credit to the
 graph term — or to any other term. The edges survived, the scorer did not, and
 the scorer's contribution was unmeasurable because the eval was saturated.
 
-**Who walks the graph now: the model.** Rule 2 of the contract says to read the
-`memory/MEMORY.md` index and *"follow links that match the task"*. Multi-hop
-associative retrieval, performed by the reader instead of by a scoring function.
+**The edge neither system had: knowledge anchored to code locations.** That is
+`recall`, new in 1.5.0. Memory grounding worked by *symptom* — grep the error
+text and hope — never by *location*. In that same project memory, **141 notes
+name code files: 494 mentions across 237 unique files**, and none of it was
+reachable from the code. You could not ask *"what does this project know about
+`apps/web/proxy.ts`?"* before opening it. (The reproduce command is at the bottom.)
 
-Seeing the graph:
+A note now declares the code it is about, in front-matter:
 
-```sh
-bash .claude/skills/memory-consolidation/graph.sh           # hubs, dead links, orphans, totals
-bash .claude/skills/memory-consolidation/graph.sh --edges   # raw adjacency list
+```yaml
+code:
+  - apps/web/proxy.ts#handleRequest
+  - apps/web/middleware.ts
 ```
 
-No index, no daemon, no build step. And the picture comes free: `memory/` is
-markdown with `[[wikilinks]]`, so it opens in Obsidian or VS Code Foam as a
-visual graph with zero dependencies added — SkillForge called these same links
-"the Foam display graph".
+Two queries, no scorer, no embeddings, no daemon — an anchor either resolves or
+it does not:
+
+```sh
+bash .claude/skills/recall/anchors.sh apps/web/proxy.ts   # what we know about this code
+bash .claude/skills/recall/anchors.sh --check             # dead anchors
+```
+
+Results come back in two sets. **ANCHORED** — exact, checkable. **MENTIONED** —
+prose mentions, ranked by density: useful, but noisy and uncheckable, which is
+precisely the argument for anchoring.
+
+**Rot detection is the point.** Rename a symbol or delete a file and `--check`
+reports `DEAD_SYMBOL` / `DEAD_FILE` — both verified end-to-end, a rename and a
+delete, each caught. A prose mention can never be checked; that is the whole
+difference between a mention and an anchor.
+
+**Code→code edges are not built here, deliberately.** serena (LSP, already seeded
+in `.mcp.json`) computes callers, references and call hierarchy exactly and live
+— `find_symbol`, `find_referencing_symbols`. Hand-maintained code structure rots;
+an LSP does not. The anchors layer carries only what an LSP cannot know: what we
+*learned* about a place in the code.
+
+**Who walks the graph: the model.** Rule 2 of the contract sends it to the
+`memory/MEMORY.md` index, tells it to *"follow links that match the task"*, and
+now also: *"Before changing a file you did not just write, ground by location:
+`skill recall`."* That routing line is why the contract grew from 79 to 81 lines
+— a skill nobody is routed to is a skill nobody uses, which is exactly how the
+predecessor's skill catalog died.
 
 ## What Keel keeps
 
@@ -122,12 +166,15 @@ Four things earned their place, and they are all that survived:
   that antipattern is in memory too).
 - **`verifier` as an independent judge** — a self-report is a claim, not a
   verdict. The one multi-agent pattern that reliably paid off.
-- **Skills, lazy-loaded** — 36 of them, ported from the predecessor and
+- **Skills, lazy-loaded** — 37 of them, most ported from the predecessor and
   stripped of its machinery. They only enter context when used.
 
-And one thing Keel *adds*: `OPS.md`, the duty board — standing
+And two things Keel *adds*. `OPS.md`, the duty board — standing
 responsibilities with a cadence, each mapped to a skill, in `build` or `live`
-mode. It is what makes end-to-end ownership routable instead of aspirational.
+mode: what makes end-to-end ownership routable instead of aspirational. And
+code anchors (skill `recall`, new in 1.5.0) — the edge neither system had:
+knowledge reachable *from* the code it is about. SkillForge's PageRank ran over
+a note-to-note graph; it never knew the code at all.
 
 ## What was NOT measured
 
@@ -143,8 +190,8 @@ Stated plainly, because a comparison that hides its gaps is marketing:
   not mean "produces better code" — that claim would need the benchmark above,
   and it has not been run.
 
-What *is* established: Keel loads 3.7× less contract on every task, asks you to
-trust 4.8× less code, requires zero runtime services where SkillForge required
+What *is* established: Keel loads 3.6× less contract on every task, asks you to
+trust 4.3× less code, requires zero runtime services where SkillForge required
 two, and removes the exact component that OOM-killed a live stage — a component
 the predecessor's own operating pattern had already told its agents to avoid.
 
@@ -166,6 +213,16 @@ du -sh keel/bundle && find keel/bundle -type f | wc -l
 
 # the golden set the retrieval stack was built to serve
 python3 -c "import json; print(len(json.load(open('skillforge/retrieval-eval.golden.json'))))"
+
+# the note-to-note graph: 222 notes, 919 edges, 0 dead links, 4 orphans
+bash .claude/skills/memory-consolidation/graph.sh
+
+# memory names code, but code could not reach memory: 141 of 222 notes,
+# 494 mentions, 237 unique files — one command, one extension set
+EXT='\.(ts|tsx|js|jsx|sql|py|go)'
+grep -rlE "$EXT" memory --include='*.md' | grep -v MEMORY.md | wc -l   # notes
+grep -rhoE "[A-Za-z0-9_/.-]+$EXT" memory --include='*.md' | wc -l      # mentions
+grep -rhoE "[A-Za-z0-9_/.-]+$EXT" memory --include='*.md' | sort -u | wc -l
 ```
 
 ---

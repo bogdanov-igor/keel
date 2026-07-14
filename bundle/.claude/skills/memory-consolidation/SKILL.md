@@ -31,10 +31,20 @@ embeddings, no external tooling — the corpus is plain markdown under
    HUBS — the most-cited notes — is the cheap centrality signal that
    replaced the predecessor's PageRank: same links read out of the
    same files, minus the scoring machinery. It feeds step 6: a note
-   cited by 2+ others is the promote-to-pattern trigger. For the
-   picture rather than the list, open `memory/` in Obsidian or VS Code
-   Foam — markdown with `[[wikilinks]]` is their native graph format,
-   nothing to install.
+   cited by 2+ others is the promote-to-pattern trigger.
+
+1b. **Dead code anchors — the rot that matters.** Note-to-note links break
+   loudly; a note anchored to code that has since moved breaks *silently* and
+   keeps being read as if it were true.
+
+   ```bash
+   bash .claude/skills/recall/anchors.sh --check
+   ```
+
+   Every `DEAD_FILE` / `DEAD_SYMBOL` is a P2 finding (`src:recall`). A renamed
+   symbol usually means the lesson still holds and only the anchor moved —
+   repair the anchor, do not delete the note. Notes that name code only in
+   prose cannot be checked at all: anchor them (skill `remember`) as you pass.
 
 2. **Dead wikilinks.** The DEAD LINKS block names every `[[slug]]`
    target with no note behind it, plus the notes citing it. Propose a

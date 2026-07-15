@@ -20,7 +20,7 @@ first, preserves the second, and is careful never to confuse them.
 
 ```sh
 cd /path/to/project
-tar -xzf keel_1.6.0.tgz && bash keel/install.sh
+tar -xzf keel_1.7.0.tgz && bash keel/install.sh
 ```
 
 The installer moves the old `.claude` to `.claude.bak.<timestamp>`, carries

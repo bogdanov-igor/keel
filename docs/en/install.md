@@ -12,7 +12,7 @@ no index to build. The kernel is shell and markdown.
 
 ## Quickstart
 
-**1.** Download `keel_1.6.0.tgz` and `keel_1.6.0.tgz.sha256` from
+**1.** Download `keel_1.7.0.tgz` and `keel_1.7.0.tgz.sha256` from
 [Releases](https://github.com/bogdanov-igor/keel/releases/latest) into your
 project folder.
 
@@ -35,12 +35,12 @@ Two paths, both running the same installer.
 
 ### From the archive
 
-You have two files side by side: `keel_1.6.0.tgz` and its `.sha256` sidecar.
+You have two files side by side: `keel_1.7.0.tgz` and its `.sha256` sidecar.
 
 ```sh
 cd /path/to/project                 # copy both files here
-shasum -c keel_1.6.0.tgz.sha256     # verify integrity first: expect "OK"
-tar -xzf keel_1.6.0.tgz
+shasum -c keel_1.7.0.tgz.sha256     # verify integrity first: expect "OK"
+tar -xzf keel_1.7.0.tgz
 bash keel/install.sh                # no argument = install into this directory
 ```
 

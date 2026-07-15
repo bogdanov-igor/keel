@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.6.0-4a9fd8?style=flat-square" alt="version 1.6.0">
+  <img src="https://img.shields.io/badge/version-1.7.0-4a9fd8?style=flat-square" alt="version 1.7.0">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0">
   <img src="https://img.shields.io/badge/kernel-312%20KB%20%C2%B7%2054%20files-success?style=flat-square" alt="312 KB, 54 files">
   <img src="https://img.shields.io/badge/skills-37-success?style=flat-square" alt="37 skills">
@@ -22,9 +22,9 @@ projects. It sets the agent up as the sole executor of a product end to end:
 invention, architecture, code, QA, deploy, infrastructure, security, market,
 support, spend. Everything beyond that is deliberately left out.
 
-[Loft](https://github.com/bogdanov-igor/loft) is a sibling kernel by the same
-author: the same approach applied to an analyst's document work — specs, a
-wiki mirrored from Confluence, corpus audits.
+[Loft](https://github.com/bogdanov-igor/loft) is my other kernel: the same
+approach applied to an analyst's document work — specs, a wiki mirrored from
+Confluence, corpus audits.
 
 Keel is the successor to SkillForge, which I rebuilt in July 2026 after
 auditing what in it actually helped and what was dead weight. SkillForge
@@ -38,7 +38,7 @@ two, and the component that once OOM-killed a live production stage is gone.
 
 ## Quickstart
 
-**1.** Download `keel_1.6.0.tgz` and `keel_1.6.0.tgz.sha256` from
+**1.** Download `keel_1.7.0.tgz` and `keel_1.7.0.tgz.sha256` from
 [Releases](https://github.com/bogdanov-igor/keel/releases/latest) into your
 project folder.
 
@@ -59,8 +59,8 @@ re-audit into `BACKLOG.md`.
 
 ```sh
 cd /path/to/project                    # tgz + .sha256 copied here
-shasum -c keel_1.6.0.tgz.sha256        # integrity first: expect "OK"
-tar -xzf keel_1.6.0.tgz
+shasum -c keel_1.7.0.tgz.sha256        # integrity first: expect "OK"
+tar -xzf keel_1.7.0.tgz
 bash keel/install.sh                   # no argument = install right here
 ```
 

@@ -29,7 +29,7 @@
   <circle cx="88" cy="93" r="9.5" fill="none" stroke="#4a9fd8" stroke-opacity="0.28" stroke-width="1"/>
   <text x="112" y="99"
         font-family="'SF Mono', SFMono-Regular, Menlo, Consolas, monospace"
-        font-size="16" letter-spacing="6.5" fill="#7c8698">KEEL · LOAD-BEARING KERNEL · v1.6 · BOGDANOV</text>
+        font-size="16" letter-spacing="6.5" fill="#7c8698">KEEL · LOAD-BEARING KERNEL · v1.7 · BOGDANOV</text>
 
   <!-- wordmark -->
   <text x="72" y="300"

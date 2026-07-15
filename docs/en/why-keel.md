@@ -1,7 +1,6 @@
 # Why Keel, and what changed from SkillForge
 
-Keel is the successor to SkillForge: same author, same problem, opposite
-conclusion. SkillForge tried to give an AI agent a whole system — an MCP
+Keel is the successor to SkillForge: same problem, opposite conclusion. SkillForge tried to give an AI agent a whole system — an MCP
 server, a vector index over project memory, a reranker, agent personas,
 approval gates, per-task artifacts, an updater. Keel keeps the four things
 that carried weight and deletes the rest.

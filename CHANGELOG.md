@@ -2,6 +2,17 @@
 
 All notable changes to Keel. Versions follow [semver](https://semver.org).
 
+## [1.7.0] — 2026-07-15
+
+Documentation pass and an architecture diagram. No kernel changes.
+
+### Changed
+
+- README (EN/RU), the four guides in docs/ and this changelog reworded;
+  section structure aligned between the two languages.
+- docs/assets/architecture.svg: kernel/project layout diagram, referenced
+  from both architecture guides.
+
 ## [1.6.0] — 2026-07-15
 
 Kernel self-test suite; `recall --backfill` anchors existing notes in one

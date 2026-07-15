@@ -150,7 +150,9 @@ exactly how the predecessor's skill catalogue died.
 
 Note-to-note links remain what they always were — memory hygiene:
 `bash .claude/skills/memory-consolidation/graph.sh` reports hubs, dead links and
-orphans, and nothing beyond that.
+orphans, and nothing beyond that. (`memory/` is plain markdown with
+`[[wikilinks]]`, so it also opens in Obsidian or VS Code Foam as a graph — a
+property of the file format, not a feature of the kernel.)
 
 What Keel dropped from SkillForge was never the graph but the **PageRank scorer**
 over it — `1 + 0.2 * graph` on top of `0.8 * vector + 0.2 * keyword` — whose value

@@ -22,6 +22,10 @@ projects. It makes the agent the sole executor of a product end to end —
 invention, architecture, code, QA, deploy, infrastructure, security, market,
 support, spend — and adds nothing else.
 
+Sibling kernel: [**Loft**](https://github.com/bogdanov-igor/loft) — the same
+philosophy applied to the analyst's document work (specs, Confluence-mirrored
+wikis, corpus audits). The loft stands on the keel.
+
 It is the successor to SkillForge, rebuilt in July 2026 after auditing what
 actually helped and what was dead weight. The audit's verdict, in one line:
 **the machinery outweighed the work.** SkillForge shipped an MCP server, a

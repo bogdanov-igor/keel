@@ -95,6 +95,79 @@ if [ "${1:-}" = "--list" ]; then
   exit 0
 fi
 
+# ── --backfill: existing notes name code in prose but cannot be found by it.
+# Resolve each mention against the real tree and anchor the ones that resolve to
+# exactly one file. Dry-run by default; --apply writes. Ambiguous and missing
+# mentions are reported, never guessed — anchoring a path that does not resolve
+# would just manufacture a dead anchor.
+if [ "${1:-}" = "--backfill" ]; then
+  APPLY=0; [ "${2:-}" = "--apply" ] && APPLY=1
+  EXT='ts|tsx|js|jsx|mjs|cjs|sql|py|go|css|json|sh'
+  IDX="$(mktemp)"; trap 'rm -f "$IDX"' EXIT
+  # index of real source files (relpaths from ROOT), machinery excluded
+  find "$ROOT" \( -name node_modules -o -name .git -o -name .data -o -name dist \
+       -o -name build -o -name .next -o -name .turbo -o -path "$MEM" \) -prune -o \
+       -type f -print 2>/dev/null | sed "s|^$ROOT/||" > "$IDX"
+  [ -s "$IDX" ] || { echo "recall backfill: no source files under $ROOT to resolve against." >&2; exit 1; }
+
+  body() { awk 'NR==1 && /^---[[:space:]]*$/{fm=1;next} fm&&/^---[[:space:]]*$/{fm=0;next} !fm' "$1"; }
+  has_code() { awk 'NR==1 && /^---[[:space:]]*$/{fm=1;next} fm&&/^---[[:space:]]*$/{exit} fm&&/^code:[[:space:]]*$/{print"y";exit}' "$1"; }
+  # candidates for a mention: index line == mention, or ending in "/"+mention
+  resolve() { awk -v m="$1" 'BEGIN{n=length(m)} $0==m{print;next} length($0)>n && substr($0,length($0)-n)=="/"m{print}' "$IDX"; }
+
+  n_notes=0; n_anch=0; n_res=0; n_amb=0; n_miss=0
+  while read -r f; do
+    [ -n "$f" ] || continue
+    n_notes=$((n_notes+1))
+    [ -n "$(has_code "$f")" ] && continue         # idempotent: skip already-anchored
+    declare -a picks=(); seen=" "
+    while read -r tok; do
+      [ -n "$tok" ] || continue
+      base="${tok%%#*}"; base="${base%%:*}"; base="${base%[.,);:]}"
+      sym=""; case "$tok" in *#*) sym="${tok#*#}";; esac
+      case "$seen" in *" $base "*) continue;; esac; seen="$seen$base "
+      cands="$(resolve "$base")"; c="$(printf '%s' "$cands" | grep -c . )"
+      if [ "$c" -eq 1 ]; then
+        n_res=$((n_res+1)); picks+=("$cands${sym:+#$sym}")
+      elif [ "$c" -gt 1 ]; then n_amb=$((n_amb+1))
+      else n_miss=$((n_miss+1)); fi
+    done < <(body "$f" | grep -oE "[A-Za-z0-9_][A-Za-z0-9_./-]*\.($EXT)(#[A-Za-z0-9_]+)?" 2>/dev/null)
+
+    [ "${#picks[@]}" -eq 0 ] && continue
+    n_anch=$((n_anch+1))
+    # cap per note to keep front-matter sane
+    block="code:"$'\n'; i=0
+    for a in "${picks[@]}"; do [ "$i" -ge 12 ] && break; block="$block  - $a"$'\n'; i=$((i+1)); done
+    echo "  $(slug "$f"): ${#picks[@]} anchor(s)"
+    printf '%s' "$block" | sed 's/^/      /'
+    if [ "$APPLY" -eq 1 ]; then
+      tmp="$(mktemp)"
+      if head -1 "$f" | grep -q '^---[[:space:]]*$'; then
+        # insert the block just before the closing --- of the front-matter.
+        # (awk -v cannot carry a multi-line value, so splice with head/tail.)
+        close="$(awk 'NR>1 && /^---[[:space:]]*$/{print NR; exit}' "$f")"
+        if [ -n "$close" ]; then
+          head -n "$((close-1))" "$f" > "$tmp"
+          printf '%s' "$block" >> "$tmp"
+          tail -n "+$close" "$f" >> "$tmp"
+        else
+          cp "$f" "$tmp"   # malformed front-matter (no close): leave untouched
+        fi
+      else
+        { printf -- '---\n%s---\n\n' "$block"; cat "$f"; } > "$tmp"
+      fi
+      mv "$tmp" "$f"
+    fi
+  done < <(find "$MEM" -name '*.md' ! -name 'MEMORY.md')
+
+  echo
+  echo "recall backfill: $n_notes notes · $n_anch anchored · $n_res resolved · $n_amb ambiguous · $n_miss unresolved"
+  [ "$APPLY" -eq 0 ] && echo "        dry run — nothing written. Re-run with --apply to write the anchors." \
+                     || echo "        written. Verify: bash .claude/skills/recall/anchors.sh --check"
+  [ "$n_amb" -gt 0 ] && echo "        ambiguous mentions (many files match a bare name) were left for you to anchor by hand."
+  exit 0
+fi
+
 # ── recall <path-or-symbol>
 Q="${1:-}"
 [ -n "$Q" ] || { echo "usage: anchors.sh <path|symbol> | --check | --list" >&2; exit 1; }

@@ -121,6 +121,28 @@ reports `DEAD_SYMBOL` / `DEAD_FILE` — the note describes code that no longer
 exists, and it says so before you act on it. A prose mention can never be checked
 at all. Dead anchors file as P2 findings like anything else.
 
+**`--backfill` bootstraps anchors from the prose already in memory.** Those 141
+notes named their code in prose long before the `code:` block existed, and
+hand-anchoring them one at a time is the chore that never gets done. `--backfill`
+reads each note, resolves every file it names against the real source tree, and
+anchors only the mentions that resolve to **exactly one** file — so a note that
+writes `apps/web/proxy.ts` lands on that file's true path even when the monorepo
+keeps the app under a subdirectory the note never wrote. A bare `route.ts`
+matching many files is ambiguous; a name matching nothing is unresolved; both are
+reported and left for you, never guessed — anchoring a path that does not resolve
+only manufactures the dead anchor `--check` exists to find. It is a dry run by
+default; `--apply` writes the front-matter and skips any note that already has a
+`code:` block, so re-running is idempotent. On the 222-note memory it resolved
+the subdirectory prefix and produced only live anchors.
+
+```sh
+# resolve prose mentions against the real tree — preview only
+bash .claude/skills/recall/anchors.sh --backfill
+
+# write the anchors (idempotent; skips notes already anchored)
+bash .claude/skills/recall/anchors.sh --backfill --apply
+```
+
 **Code → code edges are deliberately not built here.** Callers, references,
 import trees, call hierarchy — serena (LSP, seeded in `.mcp.json`) computes them
 exactly and live: `find_symbol`, `find_referencing_symbols`. A hand-maintained
@@ -130,8 +152,9 @@ can derive: what we *learned* about a place in the code — that this file
 fork-bombed a Mac, that this route shipped green and broke in prod.
 
 Contract rule 2 routes to it: *"Before changing a file you did not just write,
-ground by location: skill `recall`."* A skill nothing routes to is a skill nobody
-uses — which is exactly how the predecessor's catalog died.
+ground by location: skill `recall`."* Adding that clause is what grew the
+contract from 79 lines to 81 — a skill nothing routes to is a skill nobody uses,
+which is exactly how the predecessor's catalog died.
 
 ## Two tiers of work
 
@@ -185,6 +208,24 @@ Three, and each has to justify itself by having stopped a real incident:
   circuit breaker and whole-group teardown. Thresholds: `keel.json`.
 - **`update-check.sh`** (`SessionStart`) — one line when a newer Keel exists,
   silence otherwise.
+
+## Testing the kernel
+
+The kernel is shell scripts, and a script that is never exercised rots like any
+other code. `test/run.sh` holds Keel's own scripts — `anchors.sh`, `graph.sh`,
+the migrate `sweep.sh`, `update-check.sh` — to the standard the contract demands
+of product code: it drives each one against throwaway fixtures in a temp dir,
+offline, and exits non-zero on the first failed assertion.
+
+It is a release gate, not a suggestion. `build-archive.sh` runs it before it
+packs anything and **refuses to build** if a single case fails — a script that
+fails its own test never ships. Every case encodes a bug that actually shipped
+and was caught only by adversarial review: `--check` missing a `handleRequest →
+handleRequestV2` rename because `grep -F` is a substring match, and `MENTIONED`
+ranking by matching *lines* instead of *mentions*. The suite exists so those
+exact regressions cannot come back. Like `build-archive.sh`, `test/run.sh` is
+maintainer-only — 157 lines that prove the kernel before release and never land
+in a project.
 
 ## What is kernel-owned vs project-owned
 

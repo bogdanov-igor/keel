@@ -6,6 +6,16 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd -P)"
 VER="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+
+# Kernel self-tests gate the build. A script that fails its own test never ships —
+# the last three releases each shipped a bug that only adversarial review caught.
+if ! test_out="$(bash "$ROOT/test/run.sh" 2>&1)"; then
+  printf '%s\n' "$test_out" | tail -12 >&2
+  echo "keel: kernel self-tests FAILED — fix before building (bash test/run.sh)" >&2
+  exit 1
+fi
+echo "self-tests: $(printf '%s' "$test_out" | tail -1)"
+
 OUT="$ROOT/dist"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

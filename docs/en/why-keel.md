@@ -13,15 +13,15 @@ from the two trees; the commands are at the bottom.
 ## The measurements
 
 Compared: SkillForge 1.8.2 as deployed in the ShipPulse project, against
-Keel 1.5.0. Token figures are estimates at ~4 characters/token and are marked
+Keel 1.6.0. Token figures are estimates at ~4 characters/token and are marked
 as such; everything else is an exact count.
 
-| | SkillForge 1.8.2 | Keel 1.5.0 | Delta |
+| | SkillForge 1.8.2 | Keel 1.6.0 | Delta |
 |---|---|---|---|
 | Always-loaded contract | `CLAUDE.md` (80 lines) + `_protocol.md` (247 lines) = **327 lines / 15,245 chars** (~3.8k tokens est.) | `CLAUDE.md` = **81 lines / 4,227 chars** (~1.1k tokens est.) | **3.6× smaller** |
-| Kernel code to trust and maintain | **6,316 lines** of TS/JS/shell across 17 files — MCP server, embedding pipeline, retrieval eval, sync, update, verify | **1,460 lines** of shell across 9 files — installer, archive builder, 3 hooks, safe-run launcher, migration sweep, memory graph, code anchors | **4.3× less** |
+| Kernel code to trust and maintain | **6,316 lines** of TS/JS/shell across 17 files — MCP server, embedding pipeline, retrieval eval, sync, update, verify | **1,701 lines** of shell across 10 files — installer, 3 hooks, safe-run launcher, migration sweep, memory graph, code anchors, archive builder, kernel self-tests. **1,478 lines across 8 files ship into a project**; the archive builder (66) and the self-tests (157) — **223 across 2** — are maintainer-only and never reach a user | **3.7× less** |
 | Runtime services required | **2** — an MCP server (bun) + an Ollama daemon serving `bge-m3` embeddings | **0** | — |
-| Installed footprint | **63 MB / 3,796 files** (24 MB of `node_modules` for the MCP server; the remainder is the vector index plus `.tgz` archives the updater made *of itself*). Clean shipped tree, excluding those: 4.3 MB / 133 files | **304 KB / 54 files** | **14×** smaller than its cleanest measure; **212×** smaller than what it becomes in a working project |
+| Installed footprint | **63 MB / 3,796 files** (24 MB of `node_modules` for the MCP server; the remainder is the vector index plus `.tgz` archives the updater made *of itself*). Clean shipped tree, excluding those: 4.3 MB / 133 files | **312 KB / 54 files** | **14×** smaller than its cleanest measure; **207×** smaller than what it becomes in a working project |
 | Subagents | **8 personas** — orchestrator, product, qa, security, devops, research, copy, skill-creator | **2 by context isolation** — `scout` (read-only exploration), `verifier` (independent judge) | — |
 | Retrieval | embeddings (`bge-m3` via Ollama) + reranker + PageRank over the note-to-note graph | `MEMORY.md` index + `grep` + code anchors (`recall`) | — |
 | Retrieval golden set it was built to serve | **6 queries**, saturated at recall@5 = 1.0 | n/a | — |
@@ -30,10 +30,27 @@ as such; everything else is an exact count.
 **The kernel grew, and this table says so.** At 1.3.0 it was 893 lines of shell
 across 5 files — a 7.1× advantage. Version 1.4.0 added the migration sweep, the
 update check and the memory-graph tool: 1,305 lines across 8 files, and the
-advantage fell to 4.8×. Version 1.5.0 added the code-anchor resolver: **1,460
-lines across 9 files**, and the advantage fell again, to **4.3×**. Every line
-added is a line someone has to trust; a comparison that only ever improves is a
-comparison being managed.
+advantage fell to 4.8×. Version 1.5.0 added the code-anchor resolver: 1,460
+lines across 9 files, and the advantage fell again, to 4.3×. Version 1.6.0 added
+kernel self-tests: **1,701 lines across 10 files**, and it fell to **3.7×**. Of
+that last +241 lines, **157 are the test suite itself** — code that *raises* the
+'code to trust' count while making every other line safer to trust. That is the
+honest tension, not something to bury; and SkillForge's 6,316 counted its own
+eval harness too, so measuring keel's tests against it is apples-to-apples.
+Every line added is a line someone has to trust; a comparison that only ever
+improves is a comparison being managed.
+
+**The kernel now tests itself.** `test/run.sh` is bash assertions over the
+shipped scripts (`anchors.sh`, `graph.sh`, `sweep.sh`, `update-check.sh`):
+throwaway fixtures, offline, non-zero exit on any failure. `build-archive.sh`
+runs them first and refuses to build the archive if one fails — a script that
+fails its own test never ships. The reason it exists: each of the last three
+releases carried a real bug in a kernel script that only careful review caught —
+`--check` missed the rename `handleRequest` → `handleRequestV2` because
+`grep -F` matches a substring; the `MENTIONED` list ranked by matching lines
+rather than mentions. The suite encodes exactly those cases so they cannot come
+back. It is a maintainer tool — 157 of the 1,701 lines, and it never lands in a
+project.
 
 ## What production actually said
 
@@ -191,7 +208,7 @@ Stated plainly, because a comparison that hides its gaps is marketing:
   and it has not been run.
 
 What *is* established: Keel loads 3.6× less contract on every task, asks you to
-trust 4.3× less code, requires zero runtime services where SkillForge required
+trust 3.7× less code, requires zero runtime services where SkillForge required
 two, and removes the exact component that OOM-killed a live stage — a component
 the predecessor's own operating pattern had already told its agents to avoid.
 

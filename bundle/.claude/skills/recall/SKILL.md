@@ -22,6 +22,7 @@ bash .claude/skills/recall/anchors.sh apps/web/proxy.ts   # before you touch it
 bash .claude/skills/recall/anchors.sh handleRequest       # by symbol
 bash .claude/skills/recall/anchors.sh --check             # dead anchors
 bash .claude/skills/recall/anchors.sh --list              # every anchor
+bash .claude/skills/recall/anchors.sh --backfill          # anchor existing notes (dry run)
 ```
 
 Two result sets:
@@ -30,6 +31,26 @@ Two result sets:
   and checkable.
 - **MENTIONED** — notes that merely name it in prose, ranked by how often.
   Useful, noisy, and unverifiable — which is the whole argument for anchoring.
+
+## Backfilling an existing memory
+
+A memory written before anchors existed names code only in prose. `--backfill`
+resolves each mention against the real tree and anchors the ones that resolve to
+**exactly one** file — so `apps/web/proxy.ts` in a note becomes
+`shippulse/apps/web/proxy.ts` if that is where the file actually lives. Ambiguous
+mentions (a bare `route.ts` matching twenty files) and unresolvable ones are
+reported and left for you — anchoring a path that does not resolve just
+manufactures a dead anchor.
+
+```sh
+bash .claude/skills/recall/anchors.sh --backfill          # dry run: what it would anchor
+bash .claude/skills/recall/anchors.sh --backfill --apply  # write the front-matter
+bash .claude/skills/recall/anchors.sh --check             # then confirm they are live
+```
+
+It is idempotent (notes that already have a `code:` block are skipped) and needs
+the project's code present to resolve against. Preview first; apply once you have
+scanned the dry run for anything it resolved wrongly.
 
 ## The anchor
 

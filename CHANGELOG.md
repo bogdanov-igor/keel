@@ -2,6 +2,83 @@
 
 All notable changes to Keel. Versions follow [semver](https://semver.org).
 
+## [1.6.0] — 2026-07-15
+
+The kernel tests itself before it ships, and existing notes anchor to their code
+in one pass.
+
+### Added
+
+- **`recall --backfill` — anchor an existing note without editing front-matter by
+  hand.** 1.5.0 gave notes a `code:` block and the tooling to query and rot-check
+  it, but every anchor still had to be typed in by hand — so a memory written
+  before 1.5.0 stayed unreachable by location. Backfill reads each note, pulls
+  every code file it names in prose, and resolves that name against the real tree:
+
+  ```bash
+  bash .claude/skills/recall/anchors.sh --backfill          # dry run — nothing written
+  bash .claude/skills/recall/anchors.sh --backfill --apply  # write the front-matter
+  ```
+
+  It anchors only a mention that resolves to **exactly one** file — which is what
+  makes the monorepo prefix fall into place. A note that says `apps/web/proxy.ts`
+  becomes `shippulse/apps/web/proxy.ts` when the app lives in a subdirectory,
+  because that is the single file whose path ends in the mention. A bare
+  `route.ts` matching many files is reported as *ambiguous* and left for you to
+  anchor by hand; a name that matches nothing is reported as *unresolved*. Neither
+  is guessed — anchoring a path that does not resolve only manufactures the dead
+  anchor `--check` exists to catch. Dry-run by default; `--apply` writes;
+  idempotent — a note that already carries a `code:` block is skipped, so a second
+  run anchors nothing. It needs the project's code on disk to resolve against.
+  Validated on a real 222-note memory: it resolved the monorepo prefix and every
+  anchor it wrote came back live under `--check`.
+- **Kernel self-tests — `test/run.sh`.** bash assertions over the shipped scripts
+  — `anchors.sh`, `graph.sh`, `sweep.sh`, `update-check.sh` — run against
+  throwaway fixtures, offline, touching nothing outside a temp dir, non-zero exit
+  on any failure. Every case encodes a bug that actually shipped and was caught
+  only by reading the script: `--check` reporting a symbol alive after
+  `handleRequest → handleRequestV2` because `grep -F` is a substring match (and
+  the suffix rename — `V2`, `Async`, `Internal` — is the commonest refactor there
+  is); MENTIONED ranked by matching *lines* when a note can name a file five times
+  on one line, so the rank has to count *mentions*. The last three releases each
+  shipped a bug of exactly this shape in the kernel's own scripts — small,
+  plausible, and invisible until someone read it adversarially, because shell has
+  no compiler to fail first. The suite pins those cases so they cannot regress. It
+  is not a feature and it does not install into a project: it is a maintainer
+  tool, and it is what keeps the kernel trustworthy.
+
+### Changed
+
+- **`build-archive.sh` gates on the suite.** It runs `test/run.sh` before it
+  packages anything and aborts the build if a single case fails — a script that
+  fails its own test never ships. The build passing was never the release gate;
+  the suite passing is.
+
+### Note
+
+- **The kernel grew again — and this time most of the growth is the tests.** Shell
+  code is 1,701 lines across 10 files, up from 1,460 across 9; the lead over
+  SkillForge's 6,316 lines in 17 files narrows from 4.3x to 3.7x. Of the +241
+  lines, **157 are `test/run.sh` itself** — the addition made to keep the kernel
+  trustworthy is also the largest single addition, and it enlarges the very "code
+  you have to trust" that it exists to guard. That irony is the honest point, not
+  something to bury. Split by who runs it: 1,478 lines across 8 files ship into a
+  project (`install.sh` and the bundle scripts); 223 lines across 2 files are
+  maintainer-only (`build-archive.sh` 66, `test/run.sh` 157) and never reach a
+  user. SkillForge's 6,316 counted its own eval/test harness too, so measuring
+  keel's tests on the same line is apples-to-apples, not a thumb on the scale. The
+  growth ladder, stated plainly: 1.3.0 = 893 lines / 5 files (7.1x), 1.4.0 =
+  1,305 / 8 (4.8x), 1.5.0 = 1,460 / 9 (4.3x), 1.6.0 = 1,701 / 10 (3.7x). Still the
+  wrong direction; the difference now is that the new lines are assertions about
+  the old ones.
+- **What did not move.** The always-loaded contract is still 81 lines / 4,227
+  chars (~1.1k tokens est.) against 327 lines / 15,245 chars (~3.8k) — 3.6x
+  smaller. Installed footprint 312 KB / 54 files against SkillForge's 63 MB /
+  3,796 files (4.3 MB / 133 for its cleanest shipped tree) — 14x smaller than the
+  cleanest measure, 207x than a working project. 37 skills (7 core: `stage`,
+  `qa-browser`, `audit`, `remember`, `recall`, `safe-dev-server`, `migrate` —
+  plus 30 domain), 2 subagents, 3 hooks, 0 runtime services.
+
 ## [1.5.0] — 2026-07-14
 
 Memory grounded by location, not by symptom.

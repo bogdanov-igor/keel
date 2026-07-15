@@ -3,9 +3,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.5.0-4a9fd8?style=flat-square" alt="version 1.5.0">
+  <img src="https://img.shields.io/badge/version-1.6.0-4a9fd8?style=flat-square" alt="version 1.6.0">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0">
-  <img src="https://img.shields.io/badge/kernel-304%20KB%20%C2%B7%2054%20files-success?style=flat-square" alt="304 KB, 54 files">
+  <img src="https://img.shields.io/badge/kernel-312%20KB%20%C2%B7%2054%20files-success?style=flat-square" alt="312 KB, 54 files">
   <img src="https://img.shields.io/badge/skills-37-success?style=flat-square" alt="37 skills">
   <img src="https://img.shields.io/badge/runtime%20services-0-success?style=flat-square" alt="zero runtime services">
   <img src="https://img.shields.io/badge/contract-81%20lines-success?style=flat-square" alt="81-line contract">
@@ -30,13 +30,13 @@ practice told agents to bypass all of it and `grep` the files instead. Keel is
 that bypass, promoted to the design.
 
 → [**What changed, measured**](docs/en/why-keel.md) — the honest comparison:
-3.6× smaller always-on contract, 4.3× less kernel code, zero runtime services
+3.6× smaller always-on contract, 3.7× less kernel code, zero runtime services
 where its predecessor needed two, and the component that OOM-killed a live
 production stage, deleted.
 
 ## Quickstart
 
-**1.** Download `keel_1.5.0.tgz` and `keel_1.5.0.tgz.sha256` from
+**1.** Download `keel_1.6.0.tgz` and `keel_1.6.0.tgz.sha256` from
 [Releases](https://github.com/bogdanov-igor/keel/releases/latest) into your project folder.
 
 **2.** Open the project in Claude Code and say:
@@ -56,8 +56,8 @@ nothing) and files a re-audit into `BACKLOG.md`.
 
 ```sh
 cd /path/to/project                    # tgz + .sha256 copied here
-shasum -c keel_1.5.0.tgz.sha256        # integrity first: expect "OK"
-tar -xzf keel_1.5.0.tgz
+shasum -c keel_1.6.0.tgz.sha256        # integrity first: expect "OK"
+tar -xzf keel_1.6.0.tgz
 bash keel/install.sh                   # no argument = install right here
 ```
 
@@ -135,6 +135,15 @@ checkable. **MENTIONED** — notes that merely name it in prose, ranked by densi
 useful, noisy, and impossible to verify, which is precisely the argument for
 anchoring.
 
+**`--backfill` does that anchoring for a note you already have.**
+`bash .claude/skills/recall/anchors.sh --backfill` resolves each prose mention in an
+existing note against the real tree and anchors only the ones that land on exactly one
+file — a note naming `apps/web/proxy.ts` becomes `shippulse/apps/web/proxy.ts` when the
+monorepo buries the app a level down. Ambiguous names and unresolvable ones are reported,
+never guessed, since a guessed path is just a dead anchor manufactured on the spot. It runs
+dry by default; `--apply` writes the front-matter and skips any note that already declares
+its code.
+
 **Rot detection is the point.** Rename a symbol or delete a file and `--check`
 reports `DEAD_SYMBOL` / `DEAD_FILE` — the code moved, so the note now lies. Both
 cases are verified end to end. A prose mention can never be checked at all.
@@ -150,17 +159,32 @@ exactly how the predecessor's skill catalogue died.
 
 Note-to-note links remain what they always were — memory hygiene:
 `bash .claude/skills/memory-consolidation/graph.sh` reports hubs, dead links and
-orphans, and nothing beyond that. (`memory/` is plain markdown with
-`[[wikilinks]]`, so it also opens in Obsidian or VS Code Foam as a graph — a
-property of the file format, not a feature of the kernel.)
+orphans (919 edges, 0 dead, 4 orphans on that same memory), and nothing beyond
+that. (`memory/` is plain markdown with `[[wikilinks]]`, so it also opens in
+Obsidian or VS Code Foam as a graph — a property of the file format, not a
+feature of the kernel.)
 
 What Keel dropped from SkillForge was never the graph but the **PageRank scorer**
-over it — `1 + 0.2 * graph` on top of `0.8 * vector + 0.2 * keyword` — whose value
-was never demonstrated: the retrieval stack saturated at recall@5 = 1.0 on a golden
-set of six queries, and at the ceiling you cannot credit the graph term, or any
-other. That graph was note-to-note as well. It never knew the code at all.
+over it ("HippoRAG-lite", `1 + 0.2 * graph` on top of `0.8 * vector + 0.2 * keyword`) —
+whose value was never demonstrated: the retrieval stack saturated at recall@5 = 1.0
+on a golden set of six queries, and at the ceiling you cannot credit the graph term,
+or any other. SkillForge rebuilt that graph from the notes on every search and never
+treated it as a source of truth; and it was note-to-note as well — it never knew the
+code at all.
 
 → [Architecture](docs/en/architecture.md) for the detail.
+
+## Tested
+
+The kernel's shell scripts carry a self-test suite — `test/run.sh`, plain bash assertions
+over `anchors.sh`, `graph.sh`, `sweep.sh` and `update-check.sh`, run offline against
+throwaway fixtures. `build-archive.sh` runs it first and refuses to cut a release if
+anything fails, so a script that flunks its own test never ships. It exists because the
+last three releases each carried a real bug in these scripts that only adversarial review
+caught — `--check` missing a `handleRequest`→`handleRequestV2` rename because `grep -F`
+matches substrings, `MENTIONED` ranked by matching lines instead of mentions — and the
+suite pins exactly those cases so they cannot come back. It is a maintainer tool, not
+something that installs into your project.
 
 ## Layout in a deployed project
 

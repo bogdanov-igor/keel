@@ -110,10 +110,11 @@ fi
 residue=0
 if [ -x "$DEST/.claude/skills/migrate/sweep.sh" ]; then
   report="$(cd "$DEST" && CLAUDE_PROJECT_DIR="$DEST" bash .claude/skills/migrate/sweep.sh 2>/dev/null || true)"
+  # Only real machinery raises the migrate banner. Flagged-only reports (e.g. the
+  # .claude.bak this very install just created) are not "SkillForge residue".
   case "$report" in
-    *"no SkillForge residue found"*) ok "no previous-system residue" ;;
-    '') ok "no previous-system residue" ;;
-    *) residue=1 ;;
+    *"MACHINERY ("*) residue=1 ;;
+    *) ok "no previous-system residue" ;;
   esac
 fi
 

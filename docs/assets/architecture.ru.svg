@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" font-family="'SF Mono',Menlo,Consolas,'Liberation Mono',monospace">
+  <defs>
+    <marker id="karr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a9fd8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="560" rx="10" fill="#08090c"/>
+  <rect x="0.5" y="0.5" width="959" height="559" rx="10" fill="none" stroke="#132844"/>
+
+  <text x="40" y="42" font-size="12" letter-spacing="4" fill="#8298b4">KEEL · РАСКЛАДКА ЯДРА И ПРОЕКТА</text>
+
+  <!-- kernel panel -->
+  <rect x="40" y="70" width="400" height="384" rx="8" fill="none" stroke="#2a5a92" stroke-width="1.2"/>
+  <text x="64" y="100" font-size="15" fill="#dbe7f4" font-weight="bold">.claude/ — ядро</text>
+  <text x="64" y="118" font-size="11" fill="#8298b4">принадлежит ядру · переустановка перезапишет</text>
+
+  <rect x="64" y="134" width="352" height="60" rx="6" fill="#132844" stroke="#4a9fd8" stroke-width="1.2"/>
+  <text x="80" y="158" font-size="13" fill="#f6f9fd" font-weight="bold">CLAUDE.md — контракт</text>
+  <text x="80" y="177" font-size="11" fill="#a9bed6">81 строка · всегда в контексте</text>
+
+  <rect x="64" y="210" width="352" height="84" rx="6" fill="none" stroke="#132844" stroke-width="1"/>
+  <text x="80" y="233" font-size="13" fill="#dbe7f4">skills/ — 37, ленивая загрузка</text>
+  <text x="80" y="252" font-size="11" fill="#8298b4">7 базовых: stage · qa-browser · audit · …</text>
+  <text x="80" y="268" font-size="11" fill="#8298b4">30 доменных: инженерия · devops · рост · …</text>
+
+  <rect x="64" y="310" width="352" height="52" rx="6" fill="none" stroke="#132844" stroke-width="1"/>
+  <text x="80" y="332" font-size="13" fill="#dbe7f4">agents/ — scout · verifier</text>
+  <text x="80" y="350" font-size="11" fill="#8298b4">изоляция контекста, не должности</text>
+
+  <rect x="64" y="378" width="352" height="52" rx="6" fill="none" stroke="#132844" stroke-width="1"/>
+  <text x="80" y="400" font-size="13" fill="#dbe7f4">hooks/ — leak-guard · forkbomb breaker</text>
+  <text x="80" y="418" font-size="11" fill="#8298b4">+ тихая проверка обновлений</text>
+
+  <line x1="240" y1="194" x2="240" y2="210" stroke="#4a9fd8" stroke-width="1.2" marker-end="url(#karr)"/>
+
+  <!-- project panel -->
+  <rect x="520" y="70" width="400" height="384" rx="8" fill="none" stroke="#132844" stroke-width="1.2"/>
+  <text x="544" y="100" font-size="15" fill="#dbe7f4" font-weight="bold">файлы проекта</text>
+  <text x="544" y="118" font-size="11" fill="#8298b4">принадлежит проекту · сеется раз и не трогается</text>
+
+  <rect x="544" y="134" width="352" height="44" rx="6" fill="none" stroke="#132844"/>
+  <text x="560" y="156" font-size="12.5" fill="#dbe7f4">memory/</text>
+  <text x="648" y="156" font-size="11" fill="#8298b4">индекс MEMORY.md · якоря кода</text>
+
+  <rect x="544" y="186" width="352" height="44" rx="6" fill="none" stroke="#132844"/>
+  <text x="560" y="208" font-size="12.5" fill="#dbe7f4">stages/</text>
+  <text x="648" y="208" font-size="11" fill="#8298b4">большое: brief.md + report.md</text>
+
+  <rect x="544" y="238" width="352" height="44" rx="6" fill="none" stroke="#132844"/>
+  <text x="560" y="260" font-size="12.5" fill="#dbe7f4">BACKLOG.md · PARKED.md</text>
+  <text x="560" y="275" font-size="11" fill="#8298b4">очередь работ · заблокированное с планом</text>
+
+  <rect x="544" y="290" width="352" height="44" rx="6" fill="none" stroke="#132844"/>
+  <text x="560" y="312" font-size="12.5" fill="#dbe7f4">OPS.md</text>
+  <text x="648" y="312" font-size="11" fill="#8298b4">дежурства · режим build/live</text>
+
+  <rect x="544" y="342" width="352" height="44" rx="6" fill="none" stroke="#132844"/>
+  <text x="560" y="364" font-size="12.5" fill="#dbe7f4">keel.json</text>
+  <text x="648" y="364" font-size="11" fill="#8298b4">пороги предохранителя · апдейт-чек</text>
+
+  <rect x="544" y="394" width="352" height="44" rx="6" fill="none" stroke="#132844"/>
+  <text x="560" y="416" font-size="12.5" fill="#dbe7f4">.mcp.json</text>
+  <text x="648" y="416" font-size="11" fill="#8298b4">внешние серверы: serena · context7</text>
+
+  <!-- agent flow -->
+  <line x1="440" y1="252" x2="520" y2="252" stroke="#4a9fd8" stroke-width="1.2" marker-end="url(#karr)" marker-start="url(#karr)"/>
+  <text x="480" y="238" font-size="11" fill="#a9bed6" text-anchor="middle">агент</text>
+  <text x="480" y="271" font-size="9" fill="#8298b4" text-anchor="middle">читает/пишет</text>
+
+  <!-- footer -->
+  <line x1="40" y1="486" x2="920" y2="486" stroke="#132844"/>
+  <text x="40" y="516" font-size="11.5" fill="#a9bed6">ни своего MCP-сервера · ни векторного индекса · ни персон · ноль сервисов в рантайме</text>
+  <text x="40" y="535" font-size="11" fill="#8298b4">малая работа не оставляет файлов · большая оставляет два: бриф и проверенный отчёт</text>
+</svg>

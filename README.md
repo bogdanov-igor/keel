@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Keel — minimal load-bearing kernel for Claude Code" width="100%">
+  <img src="docs/assets/banner.svg?v=1.7" alt="Keel — minimal load-bearing kernel for Claude Code" width="100%">
 </p>
 
 <p align="center">

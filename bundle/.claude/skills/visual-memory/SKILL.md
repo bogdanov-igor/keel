@@ -1,6 +1,7 @@
 ---
 name: visual-memory
 description: Turn a screenshot or PDF page into searchable memory by writing a structured text description as a plain note under memory/ plus one MEMORY.md index line — retrievable later by grep, no image infrastructure.
+argument-hint: "[path to screenshot or PDF page]"
 ---
 
 # visual-memory

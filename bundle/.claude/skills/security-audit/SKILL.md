@@ -1,6 +1,7 @@
 ---
 name: security-audit
 description: Targeted security review of a file set or diff — secrets exposure, injection vectors, auth gaps, XSS, CORS — with graded findings filed into BACKLOG.md.
+argument-hint: "[dir | file | diff ref]"
 ---
 
 # security-audit

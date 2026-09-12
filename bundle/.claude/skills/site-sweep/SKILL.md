@@ -1,6 +1,7 @@
 ---
 name: site-sweep
-description: Full-site user-level audit — a Playwright crawler captures screenshots, geometry, and console/network evidence for every route × viewport × theme, then a multi-lens review grades each page launch-ready | needs-polish | pet-project; run before launch or after broad UI changes.
+description: Full-site user-level audit — a Playwright crawler captures screenshots, geometry, and console/network evidence for every route × viewport × theme, then a multi-lens review grades each page launch-ready | needs-polish | pet-project. Run at the owner's request before launch or after broad UI changes.
+disable-model-invocation: true
 ---
 
 # Site sweep
@@ -20,9 +21,21 @@ site-sweep grades the whole site the way a first-time visitor sees it.
   390×844) × 2 themes (light/dark). Expected page loads = routes × 4.
 - Output: screenshots + `sweep.json` under `.qa/sweep/<yyyymmdd>/`;
   read back only the JSON summary, not the images (qa-browser
-  convention). The crawler lives at `.qa/site-sweep.mjs` — same
-  Playwright-through-Bash pattern as the qa-browser sweep script,
-  extended with slices, geometry, and console/network capture.
+  convention).
+- The crawler is written per project — routes, themes, and auth differ
+  everywhere — on top of `.claude/skills/qa-browser/sweep.mjs`: import
+  or copy its checks, then add slices, geometry, and console/network
+  capture. Save it as `.qa/site-sweep.mjs`. It must write `sweep.json`
+  as one record per route × viewport × theme, in this shape:
+
+  ```text
+  {route, viewport, theme, status, screenshot, slices: [paths],
+   geometry: {header, h1, main, footer, navLeft, overflowX, gaps: [...]},
+   console: [...], failedRequests: [...]}
+  ```
+
+  Steps 3–6 below read exactly these fields; a crawler that omits one
+  silently removes a check.
 - The crawl spawns many Chromium processes; run it through the
   safe-run launcher with a TTL so a hung browser tree gets reaped
   (Bash tool, `run_in_background: true`):

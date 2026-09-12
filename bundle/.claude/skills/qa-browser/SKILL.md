@@ -1,19 +1,21 @@
 ---
 name: qa-browser
 description: Browser verification pass for UI work — programmatic defect checks (invisible overlays, overflow, dead theme), real user flows, screenshot-vs-reference with differences listed. Run before declaring any UI change done; "looks fine" is not a result.
+allowed-tools: Bash(node .claude/skills/qa-browser/sweep.mjs *)
 ---
 
 # QA browser pass
 
 Why this exists: this stack's history holds three "done, in prod"
-declarations refuted by the owner's hands within minutes — customizer
-broken behind green tsc/biome/e2e, an invisible overlay eating every
+declarations refuted by the owner's hands within minutes — a settings
+editor broken behind green tsc/biome/e2e, an invisible overlay eating every
 mobile click, a dark theme dead on static pages. Reading code and
 glancing at one screenshot systematically miss these. This procedure
 catches them.
 
-Prereqs: the `playwright` npm package resolvable from the project
-(`node -e "require.resolve('playwright')"`; if absent:
+Prereqs: the `playwright` npm package resolvable from the directory you
+run the sweep in — `cd` into the app directory when `node_modules`
+lives there (`node -e "require.resolve('playwright')"`; if absent:
 `npm i -D playwright`), browsers installed once per machine
 (`npx playwright install chromium` — the hook allows `install`).
 App running via skill `safe-dev-server`. Write script output under
@@ -21,72 +23,52 @@ App running via skill `safe-dev-server`. Write script output under
 
 ## 1. Programmatic sweep — cheap and exact, always first
 
-One script, three viewports (360×740, 768×1024, 1440×900), every page
-the change touches plus its neighbors:
+Three viewports (360×740, 768×1024, 1440×900), every page the change
+touches plus its neighbors:
 
-```js
-// .qa/sweep.mjs — run: node .qa/sweep.mjs <url> [more urls...]
-import { chromium } from 'playwright';
-const browser = await chromium.launch();
-const out = [];
-for (const url of process.argv.slice(2)) {
-  for (const vp of [{width:360,height:740},{width:768,height:1024},{width:1440,height:900}]) {
-    const page = await browser.newPage({ viewport: vp });
-    let resp = null;
-    try {
-      resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      // settle without dying on long-polling/SSE pages
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    } catch (e) {
-      out.push({ url, viewport: vp.width, findings: [{ kind: 'load-error', error: String(e).slice(0, 200) }] });
-      await page.close();
-      continue;
-    }
-    const findings = await page.evaluate(() => {
-      const sel = el => el.tagName.toLowerCase() +
-        ((el.getAttribute('class') || '').trim() ? '.' + el.getAttribute('class').trim().split(/\s+/)[0] : '');
-      const bad = [];
-      const de = document.documentElement;
-      if (de.scrollWidth > de.clientWidth + 1)
-        bad.push({ kind: 'page-overflow-x', scrollWidth: de.scrollWidth, clientWidth: de.clientWidth });
-      for (const el of document.querySelectorAll('*')) {
-        const cs = getComputedStyle(el), r = el.getBoundingClientRect();
-        if (el.scrollWidth > el.clientWidth + 8 && cs.overflowX === 'visible' && r.width > 0)
-          bad.push({ kind: 'element-overflow', sel: sel(el) });
-        // invisible click-eater: covers most of the viewport, cannot be
-        // seen, still receives pointer events. visibility:hidden elements
-        // are NOT hit-test targets, so only near-zero opacity qualifies.
-        if ((cs.position === 'fixed' || cs.position === 'absolute')
-            && r.width >= innerWidth * .9 && r.height >= innerHeight * .9
-            && parseFloat(cs.opacity) < .05
-            && cs.visibility !== 'hidden'
-            && cs.pointerEvents !== 'none')
-          bad.push({ kind: 'invisible-overlay-eats-clicks', sel: sel(el), zIndex: cs.zIndex });
-      }
-      // who actually receives a click at key points (diagnostic context)
-      for (const [x, y] of [[innerWidth/2, innerHeight/2], [innerWidth-40, innerHeight-40]])
-        bad.push({ kind: 'hit-test', at: [x|0, y|0], receiver: sel(document.elementFromPoint(x, y) || de) });
-      return bad;
-    });
-    // never sweep an error page or a login redirect in the target's name
-    const status = resp ? resp.status() : 0;
-    if (status >= 400) findings.unshift({ kind: 'http-error', status });
-    if (new URL(page.url()).pathname !== new URL(url).pathname)
-      findings.unshift({ kind: 'redirected', finalUrl: page.url() });
-    out.push({ url, finalUrl: page.url(), status, viewport: vp.width, findings });
-    await page.close();
-  }
-}
-console.log(JSON.stringify(out, null, 1));
-await browser.close();
+```sh
+node .claude/skills/qa-browser/sweep.mjs <url> [more urls...] > .qa/sweep.json
 ```
+
+Read the JSON, never the pages it loaded. Kinds it emits:
+`page-overflow-x`, `element-overflow` (only overflow no ancestor
+scrolls, one line per selector), `invisible-overlay-eats-clicks`,
+`click-stolen`, `low-contrast`, and the diagnostics `hit-test` /
+`redirected` / `http-error` / `load-error`.
 
 `invisible-overlay-eats-clicks` is the exact historical mobile bug
 (an `opacity:0` panel with `pointer-events:auto` stretched over the
-FAB) — no screenshot can show it; this check can. `hit-test` entries
-are diagnostic context, not defects. `redirected` / `http-error` /
-`load-error` mean the target page was never actually checked — treat
-the page as unverified, not clean.
+FAB) — no screenshot can show it; this check can.
+
+`click-stolen` is the same theft one control at a time: at the centre
+of the visible part of a link/button/input, someone else receives the
+click — an overlay over a single button, which no screenshot and no
+size threshold can catch. Measured on eight public sites: after the
+sweep learned to probe the first line box of a wrapped link, skip
+screen-reader-only controls and clip a control to its visible part, it
+reported nothing there; a real theft still trips it. Still a candidate,
+confirmed by eye: a `<label>` covering its own input and a sticky
+header over a link scrolled beneath it are legitimate and show up too.
+
+`low-contrast` is text whose colour against the nearest opaque
+ancestor background falls under 4.5:1 (3:1 for large text), twelve per
+page, one per selector. A candidate, not a verdict: muted meta text is
+a common real finding; a ratio near 1.0 usually means the true
+background is a sibling layer (a video, a canvas, a gradient element)
+the check cannot see. Text over an image is skipped.
+
+`hit-test` entries are diagnostic context, not defects. `redirected` /
+`http-error` / `load-error` mean the target page was never actually
+checked — treat the page as unverified, not clean.
+
+### No server available
+
+When the circuit breaker refuses a server (host memory pressure), QA
+still runs — do not raise its caps to get one. Playwright can serve
+the build itself: `page.route('**/*', …)` intercepts every request,
+maps the URL path onto a file in the built output directory (`dist/`,
+`out/`, `build/`) and fulfils it from disk. No process, no port,
+nothing to orphan, and every check in this skill works against it.
 
 ## 2. Flow pass — catches what no static check can
 
@@ -123,11 +105,25 @@ only a coarse extra signal and needs animations quieted
 
 ## 4. Screenshot vs reference — last, never alone
 
-Compare against the mock, baseline, or the neighboring page, and write
-the differences as a list ("icon 3× too large", "price row wraps",
-"CTA below the fold"). Zoom into suspect regions (`clip:`) before
-judging detail. A full-page screenshot plus "looks correct" is an
-anti-result; element crops alone have declared readiness falsely before.
+The reference is a file, not a memory of one:
+`qa-baseline/<route>-<viewport>.png`, tracked in git — not under
+`.qa/`, which the installer gitignores.
+
+- Render the route in the same viewport, put it next to its baseline,
+  and compare pixels. Write the differences as a list ("icon 3× too
+  large", "price row wraps", "CTA below the fold"). Zoom into suspect
+  regions (`clip:`) before judging detail.
+- A text or CSS diff is not evidence. One reported "~5% off" on a pair
+  whose structure differed outright.
+- No baseline for this route × viewport → the first run creates one.
+  That run is a baseline, not a check: it asserts nothing.
+- A baseline changes only on a `verifier` pass or the owner's
+  decision. Overwrite it quietly and the defect becomes canon.
+- If the project synced its design system (`/design-sync`), the
+  reference may come from there — skill `design-port`.
+
+A full-page screenshot plus "looks correct" is an anti-result; element
+crops alone have declared readiness falsely before.
 
 ## Output
 

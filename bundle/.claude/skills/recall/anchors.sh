@@ -6,9 +6,10 @@
 #   bash anchors.sh --check                    # dead anchors: code moved, notes now lie
 #   bash anchors.sh --list                     # every anchor in memory
 #
-# Grounding by SYMPTOM is grep. Grounding by LOCATION is this. Contract rule 2
-# asks for memory before nontrivial work — but a lesson about proxy.ts is
-# useless if the only way to find it is guessing the symptom that led to it.
+# Grounding by SYMPTOM is grep. Grounding by LOCATION is this. The contract's
+# grounding rule asks for memory before nontrivial work — but a lesson about
+# proxy.ts is useless if the only way to find it is guessing the symptom that
+# led to it.
 #
 # Anchors live in note front-matter, which makes them checkable:
 #

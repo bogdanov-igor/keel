@@ -1,6 +1,8 @@
 ---
 name: recall
 description: Ground in what the project already learned about a specific place in the code — before changing it. Answers "what do we know about this file/symbol", and detects notes whose code anchors no longer resolve (the code moved; the note now lies). Use before touching an unfamiliar or previously-burned file, and when memory feels detached from the codebase.
+argument-hint: "[path | symbol | --check | --backfill]"
+allowed-tools: Bash(bash .claude/skills/recall/anchors.sh *)
 ---
 
 # Recall
@@ -37,7 +39,7 @@ Two result sets:
 A memory written before anchors existed names code only in prose. `--backfill`
 resolves each mention against the real tree and anchors the ones that resolve to
 **exactly one** file — so `apps/web/proxy.ts` in a note becomes
-`shippulse/apps/web/proxy.ts` if that is where the file actually lives. Ambiguous
+`app/apps/web/proxy.ts` when the app lives one level down. Ambiguous
 mentions (a bare `route.ts` matching twenty files) and unresolvable ones are
 reported and left for you — anchoring a path that does not resolve just
 manufactures a dead anchor.

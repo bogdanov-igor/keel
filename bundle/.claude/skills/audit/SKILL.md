@@ -8,7 +8,7 @@ description: Scoped audit of one surface/dimension — evidence-backed findings 
 ## Before starting
 
 Count open `src:audit*` items in `BACKLOG.md`. At 20 or more, stop:
-burn down instead (contract rule 6). This stack's history: two audits
+burn down instead (the contract's WIP limit). This stack's history: two audits
 produced 194 findings, ~58 never closed — finding-generation that
 outpaces fixing is motion, not progress.
 

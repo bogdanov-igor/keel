@@ -1,6 +1,7 @@
 ---
 name: safe-dev-server
 description: Owns every persistent process launch — dev servers, watchers, preview servers go through the safe-run launcher with a process-tree circuit breaker and whole-group teardown. The forkbomb hook denies raw launches; this is the sanctioned path.
+allowed-tools: Bash(bash .claude/skills/safe-dev-server/safe-run.sh *)
 ---
 
 # Safe dev server
@@ -43,6 +44,32 @@ The breaker caps the descendant process tree and memory (thresholds
 from `keel.json:circuit_breaker`, sane fallbacks built in) and reaps
 the whole group on breach — a runaway rebuild loop dies alone instead
 of taking the host with it.
+
+## Daemonizing commands — the launcher cannot supervise them
+
+Some CLIs detach and exit. `astro preview` (Astro 7) forks a daemon
+and returns, so the supervisor reports `child exited rc=0` and reaps
+an empty group while the port keeps answering: launcher dead, server
+alive. That is exactly the orphan safe-run exists to prevent, and no
+TTL or breaker will ever reach it.
+
+Check the command before launching it, and for static output serve the
+directory in the foreground instead of using the framework's preview
+daemon:
+
+```sh
+bash .claude/skills/safe-dev-server/safe-run.sh \
+  --label preview --url http://127.0.0.1:4321/ -- \
+  python3 -m http.server 4321 --bind 127.0.0.1 --directory dist
+```
+
+A daemon that already escaped belongs to no group of ours — stop it
+with its own stop command (`npx astro preview stop`), then relaunch in
+the foreground.
+
+When the breaker trips on host memory pressure, do not raise its caps
+to get a server: QA does not need one (skill `qa-browser` serves the
+built output through Playwright).
 
 ## Ready / inspect / stop
 

@@ -1,6 +1,7 @@
 ---
 name: memory-consolidation
 description: Scan memory/ and propose (never apply) consolidation — merge duplicate lessons, promote a recurring lesson to patterns/, repair dead [[wikilinks]], flag stale notes, tighten MEMORY.md index lines. Run when memory feels noisy or on a periodic hygiene pass.
+allowed-tools: Bash(bash .claude/skills/memory-consolidation/graph.sh *), Bash(bash .claude/skills/recall/anchors.sh *)
 ---
 
 # Memory consolidation

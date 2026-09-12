@@ -1,6 +1,7 @@
 ---
 name: codebase-map
 description: Produce a structural map of a codebase — top-level directories, entry points, framework, major modules, config files, dependency counts — using only grep and filesystem commands; use before an audit or any work in an unfamiliar repo.
+argument-hint: "[repo root]"
 ---
 
 # codebase-map
@@ -63,7 +64,12 @@ for prior notes on this repo — an earlier map or lesson may already cover it.
 
 ## Output
 
-Report the map as a short markdown block in the reply, e.g.:
+Write the map to `memory/patterns/codebase-map.md` (one index line in
+`memory/MEMORY.md`, as skill `remember` does it) and repeat it in the
+reply. The note declares its entry points and main modules under
+`code:` in the front-matter, so `recall --check` reports the day the
+map stops matching the tree; `scout` starts from this file instead of
+grepping the whole repository. The body is the short block below:
 
 ```
 Framework: Next.js 14 (TypeScript)

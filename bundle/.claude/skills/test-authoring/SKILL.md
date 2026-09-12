@@ -1,6 +1,7 @@
 ---
 name: test-authoring
 description: Author unit and integration tests for a target file or function — happy path, edge cases, error states — and estimate the coverage delta. Use when code lacks tests or a change needs regression protection.
+argument-hint: "[target file or function]"
 ---
 
 # test-authoring

@@ -58,8 +58,15 @@ add_f "INSTALL.en.md" "predecessor install docs — superseded by Keel's docs/"
 add_f "LAUNCH-OPS.md" "launch ops notes — OPS.md is Keel's duty board; merge what still matters"
 add_f "memory/signals" "signal notes — valuable content, non-Keel layout; keep or fold into memory/lessons"
 add_f "memory/chat-render-active.md" "note from the chat-render patch system, which Keel does not ship"
+# A backup with a VERSION file inside is one Keel's own installer made, so it
+# holds a Keel kernel, not a predecessor's. Saying that plainly stops the owner
+# from opening it looking for SkillForge state that was never there.
 for d in .claude.bak.*; do
-  add_f "$d" "previous kernel backup, left by install.sh — prune when you no longer need it"
+  if [ -f "$d/VERSION" ]; then
+    add_f "$d" "keel's own backup left by install.sh — prune when you no longer need it"
+  else
+    add_f "$d" "previous kernel backup, left by install.sh — prune when you no longer need it"
+  fi
 done
 
 # --- report ------------------------------------------------------------------
@@ -72,10 +79,14 @@ echo "== SkillForge residue in $ROOT"
 echo
 if [ "${#machinery[@]}" -gt 0 ] || [ "$MCP_DIRTY" -eq 1 ]; then
   echo "MACHINERY (swept to $QUAR/ on --apply):"
-  for m in "${machinery[@]}"; do
-    sz="$(du -sh "$m" 2>/dev/null | cut -f1)"
-    echo "  - $m  (${sz:-?})"
-  done
+  # Guarded: expanding an empty array under `set -u` is a fatal error in the
+  # bash 3.2 that ships with macOS, and a dirty .mcp.json alone gets us here.
+  if [ "${#machinery[@]}" -gt 0 ]; then
+    for m in "${machinery[@]}"; do
+      sz="$(du -sh "$m" 2>/dev/null | cut -f1)"
+      echo "  - $m  (${sz:-?})"
+    done
+  fi
   [ "$MCP_DIRTY" -eq 1 ] && echo "  - .mcp.json  (skillforge server entry — Keel has no MCP of its own)"
   echo
 fi
@@ -103,19 +114,27 @@ MAN="$QUAR/MANIFEST.md"
   echo "# Keel migration — $(date '+%Y-%m-%d %H:%M:%S')"
   echo
   echo "SkillForge machinery moved out of the project. Nothing was deleted:"
-  echo "every path below is preserved here and can be restored with \`mv\`."
+  echo "every path below is preserved here; the \`## Restore\` block at the end"
+  echo "puts any of it back verbatim."
   echo
   echo "## Moved"
 } > "$MAN"
 
-for m in "${machinery[@]}"; do
-  dst="$QUAR/$m"
-  mkdir -p "$(dirname "$dst")"
-  if mv "$m" "$dst" 2>/dev/null; then
-    echo "- \`$m\` → \`$dst\`" >> "$MAN"
-    echo "keel migrate: swept $m"
-  fi
-done
+# Each moved item earns its own restore command, carrying its own mkdir -p: by
+# the time anyone reads this manifest the parent directory may well be gone
+# (that is usually why the sweep happened), and a bare `mv` would fail there.
+restores=()
+if [ "${#machinery[@]}" -gt 0 ]; then
+  for m in "${machinery[@]}"; do
+    dst="$QUAR/$m"
+    mkdir -p "$(dirname "$dst")"
+    if mv "$m" "$dst" 2>/dev/null; then
+      echo "- \`$m\` → \`$dst\`" >> "$MAN"
+      restores+=("mkdir -p \"$(dirname "$m")\" && mv \"$dst\" \"$m\"")
+      echo "keel migrate: swept $m"
+    fi
+  done
+fi
 
 if [ "$MCP_DIRTY" -eq 1 ]; then
   cp .mcp.json "$QUAR/mcp.json.before" 2>/dev/null
@@ -155,11 +174,23 @@ fi
   echo "\`.claude/skills/_user\` · product source."
   echo
   echo "## Restore"
+  echo "Run from the project root. Each line puts one item back where it was;"
+  echo "run the whole block to undo the sweep entirely."
   echo "\`\`\`sh"
-  echo "mv $QUAR/<path> <path>"
+  if [ "${#restores[@]}" -gt 0 ]; then
+    for r in "${restores[@]}"; do echo "$r"; done
+  else
+    echo "# nothing was moved"
+  fi
   echo "\`\`\`"
 } >> "$MAN"
 
+# A .gitignore whose last line has no newline is ordinary; appending blind glues
+# our pattern onto the project's last one and silently breaks both.
+touch .gitignore
+if [ -s .gitignore ] && [ -n "$(tail -c 1 .gitignore)" ]; then
+  printf '\n' >> .gitignore
+fi
 grep -qxF ".keel-migration/" .gitignore 2>/dev/null || echo ".keel-migration/" >> .gitignore
 
 # The re-audit is the point of migrating, so the script files it itself: an item

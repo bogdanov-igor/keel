@@ -58,6 +58,23 @@ symptom, not the moral. Hard rules: one physical line, no paragraphs,
 bodies never in the index. The previous index grew into 104 KB of
 paragraphs and became context rot that every session paid to load.
 
+## A lesson about the work itself goes to the kernel
+
+A lesson about the product — how a system behaves, what the owner
+wants, where this codebase bites — stays a note in `memory/`. A lesson
+about how the agent works — style, process, acceptance, a correction
+the owner has now given twice — is also filed as a kernel request, so
+it reaches every project instead of one:
+
+```text
+- [ ] P2 | kernel | raise into keel: <the lesson, one line> | ev:memory/<path> | src:kernel
+```
+
+Claude Code's own auto memory (`~/.claude/projects/<project>/memory/`)
+is machine-local and outside the repository. What it captured and
+should outlive the project is written here the same way; skill
+`adopt-feedback` sweeps its `feedback` entries on request.
+
 ## Maintain
 
 A note proven wrong → update it in place, noting what superseded it;

@@ -1,6 +1,7 @@
 ---
 name: code-audit
 description: Review a diff or file set for correctness, safety, performance, and style defects — line-cited findings, each with one concrete fix, ranked into BACKLOG.md.
+argument-hint: "[file | diff ref | glob]"
 ---
 
 # Code audit

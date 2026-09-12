@@ -1,6 +1,8 @@
 ---
 name: migrate
-description: Sweep SkillForge (or derivative) residue out of a project that Keel now runs — quarantine the predecessor's machinery, never its state, then re-audit because the kernel changed underneath the codebase. Use on first session after installing Keel over an older system, or whenever install.sh reports residue.
+description: Sweep SkillForge (or derivative) residue out of a project that Keel now runs — quarantine the predecessor's machinery, never its state, then re-audit because the kernel changed underneath the codebase. Run when the owner asks, or when install.sh reported residue after installing Keel over an older system.
+disable-model-invocation: true
+allowed-tools: Bash(bash .claude/skills/migrate/sweep.sh *)
 ---
 
 # Migrate

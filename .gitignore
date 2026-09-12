@@ -5,3 +5,5 @@ dist/
 .DS_Store
 .claude.bak.*
 .keel-migration/
+.serena/
+.claude/worktrees/

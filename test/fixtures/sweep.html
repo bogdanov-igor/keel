@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>sweep fixture</title>
+<style>
+  body { margin: 0; font: 16px sans-serif; color: #222; background: #fff; }
+  .wrap { position: relative; width: 300px; height: 60px; margin: 20px; }
+  #covered { width: 200px; height: 40px; }
+  #thief { position: absolute; left: 0; top: 0; width: 300px; height: 60px; background: transparent; }
+  .narrow { width: 150px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .cell { width: 120px; overflow: hidden; white-space: nowrap; display: inline-block; vertical-align: top; }
+  .low { color: #8a817a; background: #f5f2ec; }
+  .big { color: #999; font-size: 28px; }
+  .scroller { width: 200px; overflow-x: auto; }
+  .scroller div, .escaping div { width: 600px; }
+  .escaping { width: 200px; }
+</style>
+<!-- 1. a transparent layer over one button: the click goes to the layer -->
+<div class="wrap"><button id="covered">Pay now</button><div id="thief"></div></div>
+<!-- 2. a link wrapped over two lines: the centre of its bounding box is between the lines -->
+<p class="narrow"><a id="twoline" href="#">a link that wraps across two whole lines here</a></p>
+<!-- 3. a screen-reader-only skip link -->
+<a class="sr" id="skip" href="#main">Skip to content</a>
+<!-- 4. a link cut off by a cell with overflow hidden; the next cell is painted over the cut part -->
+<span class="cell"><a id="clipped" href="#">a very long link text that gets clipped by the cell</a></span><span class="cell">next cell</span>
+<!-- 5. text contrast -->
+<p class="low" id="lowp">muted meta text</p>
+<p class="big" id="bigp">Big heading text</p>
+<p id="finep">normal text</p>
+<!-- 6. overflow: inside a scroller (by design) vs escaping its box -->
+<div class="scroller"><div id="inscroller">wide content in a scroller</div></div>
+<div class="escaping" id="escaping"><div>wide content escaping its box</div></div>

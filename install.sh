@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Keel installer: copy the kernel into a project.
 # Usage: bash install.sh [/path/to/project]     (no argument = install here)
+#
+# Run as often by Claude ("install keel from the archive in this folder") as by
+# a human, so it never prompts, never asks a question, and says out loud every
+# thing it moved, carried over or skipped.
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd -P)"
 # No argument = install into the current directory: the "unpack the archive
@@ -41,8 +45,14 @@ printf '\n'
 
 # .claude — always a real directory, never a symlink (symlinks break
 # per-project memory and hook path resolution).
+#
+# The backup name must be unique, not merely timestamped: two installs in the
+# same second made `mv` drop the second backup INSIDE the first, burying the
+# real previous .claude two levels below the path the message named.
 if [ -e "$DEST/.claude" ] || [ -L "$DEST/.claude" ]; then
-  BAK="$DEST/.claude.bak.$(date +%Y%m%d%H%M%S)"
+  BAKBASE="$DEST/.claude.bak.$(date +%Y%m%d%H%M%S)"
+  BAK="$BAKBASE"; bn=2
+  while [ -e "$BAK" ]; do BAK="$BAKBASE-$bn"; bn=$((bn+1)); done
   mv "$DEST/.claude" "$BAK"
   ok "previous .claude → ${BAK##*/}"
 fi
@@ -52,7 +62,20 @@ cp -R "$SRC/bundle/.claude" "$DEST/.claude"
 find "$DEST/.claude" -name '*.sh' -exec chmod +x {} +
 # The update-check hook compares this against the latest upstream release.
 printf '%s\n' "$VER" > "$DEST/.claude/VERSION"
-ok "kernel installed ($(ls "$DEST/.claude/skills" | wc -l | tr -d ' ') skills, 2 agents, 3 hooks)"
+# All three counted from the tree that was just installed, never from a constant
+# in this script: a stale "2 agents, 3 hooks" is a lie the owner cannot spot.
+# Hooks are the `"command":` keys of settings.json — the harness's own unit.
+# `|| true`: pipefail turns "grep found nothing" into a failed assignment and,
+# under set -e, into a dead installer — the count is the answer, not the status.
+n_skills="$(ls "$DEST/.claude/skills" 2>/dev/null | wc -l | tr -d ' ' || true)"
+# What the kernel being installed actually ships, read from the source bundle.
+# A literal floor here was a second inventory of the same thing: it said 37
+# while the bundle shipped 40, so it stopped meaning anything the moment a
+# skill was added — and a half-copied bundle would still have walked past it.
+n_skills_src="$(ls "$SRC/bundle/.claude/skills" 2>/dev/null | wc -l | tr -d ' ' || true)"
+n_agents="$(ls "$DEST/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ' || true)"
+n_hooks="$(grep -o '"command"[[:space:]]*:' "$DEST/.claude/settings.json" 2>/dev/null | wc -l | tr -d ' ' || true)"
+ok "kernel installed ($n_skills skills, $n_agents agents, $n_hooks hooks)"
 
 # Project-owned skills survive kernel (re)install: any skill directory the
 # kernel does not ship is carried over from the previous .claude — including
@@ -79,6 +102,56 @@ if [ -n "${BAK:-}" ] && [ -d "$BAK/skills" ]; then
   [ -n "$restored" ] && ok "preserved project skills:$restored"
 fi
 
+# The owner's own Claude Code setup survives a reinstall too: permissions
+# (settings.local.json), slash commands, rules, output styles, personal agents.
+# The kernel ships none of those paths, so they are carried over file by file —
+# and only where the kernel has nothing at that path, so a kernel file is never
+# shadowed by a stale copy of itself.
+carried=""
+carry_file() {
+  local rel="$1"
+  [ -f "$BAK/$rel" ] || return 0
+  [ -e "$DEST/.claude/$rel" ] && return 0
+  mkdir -p "$(dirname "$DEST/.claude/$rel")"
+  cp "$BAK/$rel" "$DEST/.claude/$rel"
+  carried="$carried $rel"
+  return 0
+}
+carry_tree() {
+  local rel="$1" f sub n=0
+  [ -d "$BAK/$rel" ] || return 0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    sub="${f#$BAK/}"
+    [ -e "$DEST/.claude/$sub" ] && continue
+    mkdir -p "$(dirname "$DEST/.claude/$sub")"
+    cp "$f" "$DEST/.claude/$sub"
+    n=$((n+1))
+  done <<EOF
+$(find "$BAK/$rel" -type f 2>/dev/null)
+EOF
+  [ "$n" -gt 0 ] && carried="$carried $rel/"
+  return 0
+}
+if [ -n "${BAK:-}" ]; then
+  carry_file "settings.local.json"
+  carry_tree "commands"
+  carry_tree "rules"
+  carry_tree "output-styles"
+  # Agents: a SkillForge backup (marker: _protocol.md) holds its persona agents,
+  # which are the predecessor's machinery, not this project's — leave them buried.
+  if [ ! -f "$BAK/_protocol.md" ] && [ -d "$BAK/agents" ]; then
+    for f in "$BAK/agents"/*.md; do
+      [ -f "$f" ] || continue
+      name="${f##*/}"
+      [ -e "$DEST/.claude/agents/$name" ] && continue
+      cp "$f" "$DEST/.claude/agents/$name"
+      carried="$carried agents/$name"
+    done
+  fi
+  [ -n "$carried" ] && ok "carried over from the previous .claude:$carried"
+fi
+
 # Seeds: create only if absent — never overwrite project state.
 mkdir -p "$DEST/memory/lessons" "$DEST/memory/antipatterns" "$DEST/memory/patterns" "$DEST/stages"
 for d in memory/lessons memory/antipatterns memory/patterns stages; do
@@ -91,19 +164,129 @@ done
 [ -f "$DEST/memory/MEMORY.md" ] || cp "$SRC/bundle/seed/MEMORY.md" "$DEST/memory/MEMORY.md"
 [ -n "$seeded" ] && ok "seeded:$seeded" || ok "project state preserved (nothing overwritten)"
 
-# Keep secret values and QA output out of git (contract rule 8 / qa-browser).
+# Keep secret values, QA output and worktree copies out of the index.
+# A .gitignore whose last line has no newline is ordinary; appending to it blind
+# glues our first pattern onto the project's last one and silently breaks both.
+# One newline, once, before the loop — not per pattern.
 touch "$DEST/.gitignore"
-for pat in ".secrets.env" ".qa/"; do
+if [ -s "$DEST/.gitignore" ] && [ -n "$(tail -c 1 "$DEST/.gitignore")" ]; then
+  printf '\n' >> "$DEST/.gitignore"
+fi
+for pat in ".secrets.env" ".qa/" ".claude/worktrees/" ".claude.bak.*"; do
   grep -qxF "$pat" "$DEST/.gitignore" || printf '%s\n' "$pat" >> "$DEST/.gitignore"
 done
 
-# MCP: seed serena (LSP navigation) + context7 (live library docs) if absent.
-if [ ! -f "$DEST/.mcp.json" ]; then
-  cp "$SRC/bundle/seed/mcp.json" "$DEST/.mcp.json"
-  ok ".mcp.json seeded: serena (needs uvx) + context7 (needs npx)"
-elif ! grep -q '"serena"' "$DEST/.mcp.json" 2>/dev/null; then
-  warn "existing .mcp.json has no serena entry — consider adding it (see bundle/seed/mcp.json)"
+# A `claude --worktree` session starts in a fresh checkout, which by definition
+# has no ignored files — so the secrets file the whole project depends on is
+# absent there unless it is named here.
+if [ ! -f "$DEST/.worktreeinclude" ]; then
+  printf '%s\n' ".secrets.env" > "$DEST/.worktreeinclude"
+  ok ".worktreeinclude seeded (.secrets.env follows you into a worktree session)"
 fi
+
+# MCP: seed only when the project has no .mcp.json at all — an existing one is
+# the owner's, and merging into it blind is how a working config gets broken.
+# A server whose launcher is missing is worse than no server: Claude Code retries
+# it every session start and reports a failure the owner did not cause. So the
+# seed is filtered down to the servers this machine can actually run.
+mcp_note=""
+if [ ! -f "$DEST/.mcp.json" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    mcp_note="$(python3 - "$SRC/bundle/seed/mcp.json" "$DEST/.mcp.json" <<'PY' || true
+import json, shutil, sys
+
+seed, out = sys.argv[1], sys.argv[2]
+d = json.load(open(seed, encoding="utf-8"))
+servers = d.get("mcpServers", {})
+kept, dropped = {}, []
+for name, cfg in servers.items():
+    cmd = cfg.get("command") if isinstance(cfg, dict) else None
+    if cmd and shutil.which(cmd):
+        kept[name] = cfg
+    else:
+        dropped.append("%s (needs %s)" % (name, cmd or "?"))
+if kept:
+    d["mcpServers"] = kept
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=2)
+        f.write("\n")
+print("kept:" + ", ".join(sorted(kept)))
+print("dropped:" + ", ".join(dropped))
+PY
+)"
+    kept="$(printf '%s\n' "$mcp_note" | sed -n 's/^kept: *//p')"
+    dropped="$(printf '%s\n' "$mcp_note" | sed -n 's/^dropped: *//p')"
+    [ -n "$kept" ] && ok ".mcp.json seeded: $kept"
+    [ -n "$dropped" ] && warn "not seeded — launcher missing: $dropped (add from keel/bundle/seed/mcp.json once installed)"
+    [ -n "$kept" ] || warn "no .mcp.json written: none of the seed's servers can run here"
+  else
+    cp "$SRC/bundle/seed/mcp.json" "$DEST/.mcp.json"
+    warn ".mcp.json seeded unfiltered (no python3 to check launchers) — remove any server whose command you do not have"
+  fi
+else
+  # An existing .mcp.json is the owner's and is left exactly as it is. It is
+  # still worth one line: every configured server ships its whole tool schema
+  # into every session AND into every subagent the session spawns, so a config
+  # nobody has pruned is a standing tax on context nobody chose to pay.
+  # Counting needs python3; without it, or on a file that does not parse, say
+  # nothing — a guess about someone's config is worse than silence.
+  if command -v python3 >/dev/null 2>&1; then
+    n_mcp="$(python3 - "$DEST/.mcp.json" 2>/dev/null <<'PY' || true
+import json, sys
+try:
+    servers = json.load(open(sys.argv[1], encoding="utf-8")).get("mcpServers")
+except Exception:
+    sys.exit(0)
+if isinstance(servers, dict) and servers:
+    print(len(servers))
+PY
+)"
+    if [ -n "$n_mcp" ]; then
+      warn "$n_mcp MCP servers configured — each costs schema tokens in every session and every subagent; keep only what this project uses"
+    fi
+  fi
+  if ! grep -q '"serena"' "$DEST/.mcp.json" 2>/dev/null; then
+    warn "existing .mcp.json has no serena entry — consider adding it (see bundle/seed/mcp.json)"
+  fi
+fi
+
+# VS Code recommendations: memory/ is a [[wikilink]] graph and the guides draw
+# their diagrams in mermaid — Foam renders the first, the mermaid preview the
+# second, and neither is discoverable from an empty editor. Seeded only when
+# the project has no recommendations file of its own; a project that wrote one
+# is not ours to edit, and saying so would be noise about a non-event.
+if [ ! -f "$DEST/.vscode/extensions.json" ]; then
+  mkdir -p "$DEST/.vscode"
+  printf '%s\n' '{"recommendations":["foam.foam-vscode","bierner.markdown-mermaid"]}' \
+    > "$DEST/.vscode/extensions.json"
+  ok ".vscode/extensions.json seeded (Foam graphs memory/, mermaid renders the diagrams)"
+fi
+
+# Integrations: what this machine can already reach. Detection only — an
+# installer that installs toolchains or signs anything in is an installer the
+# owner cannot audit. One line each, so the report stays skimmable.
+tool_line() {
+  if command -v "$1" >/dev/null 2>&1; then
+    printf '    %s✓%s %-9s %s%s%s\n' "$G" "$R" "$1" "$D" "$2" "$R"
+  else
+    printf '    %s·%s %-9s %s%s%s\n' "$D" "$R" "$1" "$D" "$2" "$R"
+  fi
+}
+printf '\n  %sintegrations%s\n' "$B" "$R"
+tool_line gh      "releases and CI checks"
+tool_line uvx     "serena LSP navigation"
+tool_line npx     "context7 docs, Playwright"
+tool_line node    "browser QA scripts"
+tool_line python3 "JSON helpers in hooks"
+tool_line codex   "an external second opinion the owner may ask for"
+tool_line gemini  "an external second opinion the owner may ask for"
+if [ -d "$HOME/Library/Caches/ms-playwright" ] || [ -d "${XDG_CACHE_HOME:-$HOME/.cache}/ms-playwright" ]; then
+  printf '    %s✓%s %-9s %s%s%s\n' "$G" "$R" "browsers" "$D" "Playwright browsers present (qa-browser, site-sweep)" "$R"
+else
+  printf '    %s·%s %-9s %s%s%s\n' "$D" "$R" "browsers" "$D" "no Playwright browsers: npx playwright install chromium" "$R"
+fi
+printf '    %s%s%s\n' "$D" "Claude Design: /design drafts UI on a canvas; /design-login then /design-sync connect the repo's design system — ask the owner" "$R"
+printf '    %s%s%s\n' "$D" "nothing was installed or signed in; in Claude Code run /integrations to record what this project can reach" "$R"
 
 # Previous-system residue: detect only. Sweeping is the migrate skill's job,
 # with the owner present — an installer does not move someone's files.
@@ -114,9 +297,49 @@ if [ -x "$DEST/.claude/skills/migrate/sweep.sh" ]; then
   # .claude.bak this very install just created) are not "SkillForge residue".
   case "$report" in
     *"MACHINERY ("*) residue=1 ;;
-    *) ok "no previous-system residue" ;;
+    *) printf '\n'; ok "no previous-system residue" ;;
   esac
 fi
+
+# Self-check. Failing loudly here beats handing over a kernel that loads
+# half-way: a broken .claude sitting where a working one used to be is the worst
+# state of all, and the owner is not required to remember the backup's name — so
+# a failed check puts the previous .claude back itself.
+selfcheck_fail() {
+  printf 'keel: SELF-CHECK FAILED — %s\n' "$1" >&2
+  rm -rf "$DEST/.claude"
+  if [ -n "${BAK:-}" ] && [ -d "$BAK" ]; then
+    mv "$BAK" "$DEST/.claude"
+    echo "keel: rolled back — the previous .claude is back in place (from ${BAK##*/})" >&2
+  else
+    echo "keel: there was no previous .claude; the failed install was removed" >&2
+  fi
+  exit 1
+}
+[ -f "$DEST/.claude/CLAUDE.md" ] || selfcheck_fail "no contract at .claude/CLAUDE.md"
+for h in "$DEST/.claude/hooks"/*.sh; do
+  [ -e "$h" ] || continue
+  [ -x "$h" ] || selfcheck_fail "hook not executable: ${h##*/}"
+done
+[ "$n_skills" = "$n_skills_src" ] \
+  || selfcheck_fail "$n_skills skills installed, the kernel ships $n_skills_src"
+[ -f "$DEST/.claude/agents/scout.md" ] && [ -f "$DEST/.claude/agents/verifier.md" ] \
+  || selfcheck_fail "kernel agents missing (scout, verifier)"
+if command -v python3 >/dev/null 2>&1; then
+  python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$DEST/.claude/settings.json" >/dev/null 2>&1 \
+    || selfcheck_fail "settings.json does not parse — the harness would load no hooks"
+fi
+# Shipped scripts are checked by RUNNING one, against a throwaway project: on the
+# real project a tool may legitimately report findings, which is not a breakage.
+SCTMP="$(mktemp -d)"
+mkdir -p "$SCTMP/memory"
+cp "$SRC/bundle/seed/MEMORY.md" "$SCTMP/memory/MEMORY.md" 2>/dev/null || true
+if ! ( cd "$DEST" && CLAUDE_PROJECT_DIR="$SCTMP" bash .claude/skills/recall/anchors.sh --list >/dev/null 2>&1 ); then
+  rm -rf "$SCTMP"
+  selfcheck_fail "recall anchors.sh does not run on a fresh install"
+fi
+rm -rf "$SCTMP"
+ok "self-check — OK"
 
 printf '\n%s  keel %s installed%s\n\n' "$B" "$VER" "$R"
 
@@ -132,6 +355,7 @@ fi
 # folder") as by a human at a prompt, so the next steps must read correctly either way.
 say "  next:"
 [ "$residue" -eq 1 ] && say "    · clean up the old system: run the migrate skill (preview: bash .claude/skills/migrate/sweep.sh)"
+say "    · in Claude Code run /integrations to record what this project can reach"
 say "    · optional browser QA dependency: npx playwright install chromium"
 say "    · if you ran this from a terminal: open the project in Claude Code"
 case "$SRC" in

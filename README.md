@@ -24,9 +24,9 @@ support, spend. Everything beyond that is deliberately left out.
 
 [Loft](https://github.com/bogdanov-igor/loft) is my other kernel — the same
 plumbing pointed at an analyst's document work: specs, a wiki mirrored from
-Confluence, corpus audits. The two trade parts. 1.8.0 took loft's rewritten
-leak-guard parser; loft took back the limit on open audit findings and the
-rule about claiming work before starting it.
+Confluence, corpus audits. The two trade parts: 1.8.0 took loft's rewritten
+leak-guard parser, and the limit on open audit findings and the rule about
+claiming work before starting it are proposed back to loft.
 
 Keel is the successor to SkillForge, which I rebuilt in July 2026 after
 auditing what in it actually helped and what was dead weight. SkillForge

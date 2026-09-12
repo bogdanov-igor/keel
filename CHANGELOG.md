@@ -152,8 +152,8 @@ releases now live in [ROADMAP.md](ROADMAP.md).
   `forkbomb-guard` denied from inside. `recompact` takes the project
   from the payload's `cwd` for the case where a session enters a
   worktree later.
-- The hit-test's false positives (above). Loft received the WIP limit
-  on audit findings and the claim discipline in its contract.
+- The hit-test's false positives (above). The WIP limit on audit
+  findings and the claim discipline are proposed to Loft, not applied.
 
 ### Fixed
 

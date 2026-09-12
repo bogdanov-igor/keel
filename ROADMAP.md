@@ -150,13 +150,13 @@ it differs by machine, so the docs say "over 400".
   at the main checkout while the payload's `cwd` follows — so
   `recompact` takes the project from `cwd`, and
   `test/cases/49-worktree.sh` runs every hook with the two disagreeing.
-- **Mirrored into Loft** (a commit in the loft repo, 2026-09-12): the
-  WIP limit on audit findings, and "claim before you start, one
-  document — one session", both in the contract; `verdict-guard` and
-  `recompact` filed in loft's roadmap as the next ports.
 
 ## Open
 
+- Proposed to Loft, not applied: the WIP limit on audit findings and
+  "claim before you start, one document — one session" in its contract,
+  `verdict-guard` and `recompact` as its next ports. A change to loft is
+  a separate decision, made in the loft repo.
 - Reference prompts for a manual eval of the contract and the skills'
   wording: the suite covers scripts, nothing covers whether a reworded
   rule still lands. Waits for a project's real tasks to serve as the set.
